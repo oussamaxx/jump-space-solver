@@ -1,5 +1,13 @@
 <script>
     import loadingGif from './assets/loading.gif';
+    import { Button } from '$lib/components/ui/button';
+    import { Checkbox } from '$lib/components/ui/checkbox';
+    import { Label } from '$lib/components/ui/label';
+    import { Separator } from '$lib/components/ui/separator';
+    import * as Alert from '$lib/components/ui/alert';
+    import * as Tabs from '$lib/components/ui/tabs';
+    import * as RadioGroup from '$lib/components/ui/radio-group';
+    import * as Collapsible from '$lib/components/ui/collapsible';
 
     import { Polyomino, tetrominos } from './js/Polyomino.js';
     import SatSolverWorker from 'worker-loader!./js/SatSolverWorker.js';
@@ -19,7 +27,7 @@
         allowReflection: false,
     }
     let polyCreateSize = 7;
-    let regionCreateSize = localState.size || 10;
+    let regionCreateSize = localState.size || 8;
     let selectedTab = 'polyomino';
     $: largestPolySize = Math.max(2, ...polyominos.map(coords => new Polyomino(coords).getSize()));
 
@@ -121,177 +129,161 @@
     }
 </script>
 
-<div class="top-bar">
-	<div class="top-bar-left">
-		<ul class="dropdown menu" data-dropdown-menu>
-			<li class="menu-text">Polyomino Solver</li>
-		</ul>
-	</div>
-	<div class="top-bar-right">
-		<ul class="menu">
-			<li><a target="_blank" href="https://github.com/cemulate/polyomino-solver">View on Github</a></li>
-		</ul>
-	</div>
-</div>
+<header class="flex items-center justify-between border-b px-4 py-3">
+    <span class="font-heading text-lg font-semibold">Jump Space Reactor Solver</span>
+    <a class="text-sm text-primary underline-offset-4 hover:underline" target="_blank" href="https://github.com/cemulate/polyomino-solver">View on Github</a>
+</header>
 
-<div class="grid-x grid-padding-x grid-padding-y">
+<main class="grid grid-cols-1 gap-6 p-4 md:grid-cols-2 xl:grid-cols-4">
 
-	<div class="cell xlarge-3 medium-6 small-12">
+    <section>
+        {#if (workComplete && foundSolution)}
+            <p class="mb-2 font-semibold">Solution</p>
+            <polyomino-control
+                    id="solution-display"
+                    size={ regionCreateSize }
+                    mode="display-multiple"
+                    value={ currentProblem.solutionCoords || [] }
+            ></polyomino-control>
+        {:else}
+            <p class="mb-2 font-semibold">Reactor</p>
+            <polyomino-control
+                    id="region-create"
+                    bind:this={ regionCreateEl }
+                    size={ regionCreateSize }
+                    on:change={ e => regionCoords = e.target.value }
+                    mode="create-region"
+            ></polyomino-control>
+        {/if}
 
-		<ul class="tabs flex-container" data-tabs id="create-tabs">
-			<li class="tabs-title flex-child-auto" class:is-active={ selectedTab == 'polyomino' }>
-                <a href="#tab-polyomino" role="tab" aria-selected={ selectedTab == 'polyomino' } on:click|preventDefault={ e => selectedTab = 'polyomino' }>Polyomino</a>
-            </li>
-			<li class="tabs-title flex-child-auto" class:is-active={ selectedTab == 'tetromino' }>
-                <a href="#tab-tetromino" role="tab" aria-selected={ selectedTab == 'tetromino' } on:click|preventDefault={ e => selectedTab = 'tetromino' }>Tetrominos</a>
-            </li>
-		</ul>
+        <div class="flex gap-2">
+            <Button variant="outline" class="size-button" disabled={ workComplete || !canDecrementRegionSize }
+                    title="grid size down" onclick={() => regionCreateSize = Math.max(2, regionCreateSize - 1) }>⇲</Button>
+            <Button variant="outline" class="size-button" disabled={ workComplete }
+                    title="grid size up" onclick={() => regionCreateSize += 1}>⇱</Button>
+            <Button variant="outline" class="size-button" disabled={ workComplete }
+                    title="clear" onclick={() => regionCoords = []}>⎚</Button>
+        </div>
+    </section>
 
-		<div class="tabs-content">
-			<div class="tabs-panel" class:is-active={ selectedTab == 'polyomino' }>
-				<polyomino-control id="poly-create" bind:this={ polyCreateEl } size={ polyCreateSize }></polyomino-control>
-				<div class="grid-x grid-padding-x align-middle">
-					<div class="cell shrink">
-                        <button class="button hollow size-button" title="grid size down" on:click={e => polyCreateSize = Math.max(2, polyCreateSize - 1) }>⇲</button>
-						<button class="button hollow size-button" title="grid size up" on:click={e => polyCreateSize += 1}>⇱</button>
-                        <button class="button hollow size-button" title="clear" on:click={e => polyCreateEl.value = [] }>⎚</button>
-					</div>
-					<div class="cell auto">
-						<button class="button expanded" on:click={ addCustomPolyomino }>Add</button>
-					</div>
-				</div>
-			</div>
-			<div class="tabs-panel" class:is-active={ selectedTab == 'tetromino' }>
-				{#each Object.entries(tetrominos) as [ name, tetromino ]}
-                    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-                    <polyomino-control 
-                        size="4"
+    <section>
+        <p class="mb-2 font-semibold">Components to be fit <span class="text-xs font-normal text-muted-foreground">(click to remove)</span></p>
+        <div class="border p-3">
+            {#each polyominos as coords, index (coords) }
+                <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+                <polyomino-control
+                        size={ largestPolySize }
                         mode="display"
                         class="tetromino"
-                        value={ tetromino.coords }
+                        value={ coords }
                         on:click={ e => {
-                            polyominos = [ ...polyominos, [ ...e.target.value ] ];
-                        } }
-                    ></polyomino-control>
-                {/each}
-			</div>
-		</div>
-
-	</div>
-
-	<div class="cell xlarge-3 medium-6 small-12">
-		<p><strong>Polyominos to be fit</strong> <small>(click to remove)</small></p>
-		<div class="callout">
-			{#each polyominos as coords, index (coords) }
-                <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-                <polyomino-control 
-                    size={ largestPolySize }
-                    mode="display"
-                    class="tetromino"
-                    value={ coords }
-                    on:click={ e => {
                         polyominos = polyominos.toSpliced(index, 1);
                     } }
                 ></polyomino-control>
             {/each}
-		</div>
-	</div>
+        </div>
+    </section>
 
-	<div class="cell xlarge-3 medium-6 small-12">
-        {#if (workComplete && foundSolution)}
-            <p><strong>Solution</strong></p>
-            <polyomino-control
-                id="solution-display"
-                size={ regionCreateSize } 
-                mode="display-multiple"
-                value={ currentProblem.solutionCoords || [] }
-            ></polyomino-control>
-        {:else}
-            <p><strong>Destination region</strong></p>
-            <polyomino-control 
-                id="region-create"
-                bind:this={ regionCreateEl }
-                size={ regionCreateSize }
-                on:change={ e => regionCoords = e.target.value }
-                mode="create-region"
-            ></polyomino-control>
-        {/if}
+    <section>
+        <Tabs.Root bind:value={ selectedTab }>
+            <Tabs.List class="w-full">
+                <Tabs.Trigger value="polyomino">Polyomino</Tabs.Trigger>
+                <Tabs.Trigger value="tetromino">Tetrominos</Tabs.Trigger>
+            </Tabs.List>
+        </Tabs.Root>
 
-        <button class="button hollow size-button" 
-            class:disabled={ workComplete || !canDecrementRegionSize }
-            disabled={ workComplete || !canDecrementRegionSize } 
-            title="grid size down" on:click={e => regionCreateSize = Math.max(2, regionCreateSize - 1) }
-        >⇲</button>
-        <button class="button hollow size-button" class:disabled={ workComplete } disabled={ workComplete }
-            title="grid size up" on:click={e => regionCreateSize += 1}
-        >⇱</button>
-        <button class="button hollow size-button" class:disabled={ workComplete } disabled={ workComplete }
-            title="clear" on:click={e => regionCoords = []}
-        >⎚</button>
-	</div>
-	
-	<div class="cell xlarge-3 medium-6 small-12">
-		<p><strong>Settings</strong></p>
-		<div>
-			<input type="checkbox" bind:checked={ settings.allowRotation }> Allow rotations
-		</div>
-		<div>
-			<input type="checkbox" bind:checked={ settings.allowReflection }> Allow reflections
-		</div>
-		<hr>
-		<div>
-			<input type="radio" value="method-dlx" bind:group={ settings.method }> 
-            Algorithm X (Dancing Links)
-			<p><small>
-				Reduces to an <a target="_blank" href="https://en.wikipedia.org/wiki/Exact_cover">exact cover problem</a> (but will find inexact solutions as well).
-			</small></p>
-		</div>
-        <details>
-            <summary>Legacy algorithms</summary>
-            <div style="padding-top: 0.6em">
-                <input type="radio" value="method-sat" bind:group={ settings.method }> 
-                SAT (JavaScript)
-                <p><small>
-                    Reduces to <a target="_blank" href="https://en.wikipedia.org/wiki/Boolean_satisfiability_problem">SAT</a>.
-                    Will find <strong>partial (inexact)</strong> solutions, and is <strong>nondeterministic</strong>.
-                    Uses a <a target="_blank" href="https://www.npmjs.com/package/boolean-sat">JavaScript SAT solver</a>, and usually gives the best performance for small or easy problems.
-                </small></p>
+        <div class="mt-4" class:hidden={ selectedTab != 'polyomino' }>
+            <polyomino-control id="poly-create" bind:this={ polyCreateEl } size={ polyCreateSize }></polyomino-control>
+            <div class="flex items-center gap-2">
+                <Button variant="outline" class="size-button" title="grid size down" onclick={() => polyCreateSize = Math.max(2, polyCreateSize - 1) }>⇲</Button>
+                <Button variant="outline" class="size-button" title="grid size up" onclick={() => polyCreateSize += 1}>⇱</Button>
+                <Button variant="outline" class="size-button" title="clear" onclick={() => polyCreateEl.value = [] }>⎚</Button>
+                <Button class="flex-1" onclick={ addCustomPolyomino }>Add</Button>
             </div>
-            <div>
-                <input type="radio" value="method-z3" bind:group={ settings.method }> 
-                SAT (Z3)
-                <p><small>
-                    Reduces to <a target="_blank" href="https://en.wikipedia.org/wiki/Boolean_satisfiability_problem">SAT</a>.
-                    Will find <strong>partial (inexact)</strong> solutions, and is <strong>deterministic</strong>.
-                    Solves SAT via a Webassembly build of the <a href="https://github.com/Z3Prover/z3">Z3 Theorem Prover</a>, and gives <em>better</em> performance for larger problems.
-                </small></p>
+        </div>
+        <div class="mt-4" class:hidden={ selectedTab != 'tetromino' }>
+            {#each Object.entries(tetrominos) as [ name, tetromino ]}
+                <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+                <polyomino-control
+                    size="4"
+                    mode="display"
+                    class="tetromino"
+                    value={ tetromino.coords }
+                    on:click={ e => {
+                        polyominos = [ ...polyominos, [ ...e.target.value ] ];
+                    } }
+                ></polyomino-control>
+            {/each}
+        </div>
+    </section>
+
+    <section class="flex flex-col gap-4">
+        <p class="font-semibold">Settings</p>
+        <div class="flex items-center gap-2">
+            <Checkbox id="allow-rotation" bind:checked={ settings.allowRotation } />
+            <Label for="allow-rotation">Allow rotations</Label>
+        </div>
+        <div class="flex items-center gap-2">
+            <Checkbox id="allow-reflection" bind:checked={ settings.allowReflection } />
+            <Label for="allow-reflection">Allow reflections</Label>
+        </div>
+        <Separator />
+        <RadioGroup.Root bind:value={ settings.method }>
+            <div class="flex items-center gap-2">
+                <RadioGroup.Item value="method-dlx" id="method-dlx" />
+                <Label for="method-dlx">Algorithm X (Dancing Links)</Label>
             </div>
-        </details>
-		<hr>
-		<button
-            class="button expanded"
-            class:success={ !workComplete }
-            class:hollow={ workComplete }
+            <p class="text-xs text-muted-foreground">
+                Reduces to an <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Exact_cover">exact cover problem</a> (but will find inexact solutions as well).
+            </p>
+            <Collapsible.Root>
+                <Collapsible.Trigger class="cursor-pointer text-sm">Legacy algorithms</Collapsible.Trigger>
+                <Collapsible.Content class="flex flex-col gap-3 pt-3">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <RadioGroup.Item value="method-sat" id="method-sat" />
+                            <Label for="method-sat">SAT (JavaScript)</Label>
+                        </div>
+                        <p class="text-xs text-muted-foreground">
+                            Reduces to <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Boolean_satisfiability_problem">SAT</a>.
+                            Will find <strong>partial (inexact)</strong> solutions, and is <strong>nondeterministic</strong>.
+                            Uses a <a class="underline" target="_blank" href="https://www.npmjs.com/package/boolean-sat">JavaScript SAT solver</a>, and usually gives the best performance for small or easy problems.
+                        </p>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <RadioGroup.Item value="method-z3" id="method-z3" />
+                            <Label for="method-z3">SAT (Z3)</Label>
+                        </div>
+                        <p class="text-xs text-muted-foreground">
+                            Reduces to <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Boolean_satisfiability_problem">SAT</a>.
+                            Will find <strong>partial (inexact)</strong> solutions, and is <strong>deterministic</strong>.
+                            Solves SAT via a Webassembly build of the <a class="underline" href="https://github.com/Z3Prover/z3">Z3 Theorem Prover</a>, and gives <em>better</em> performance for larger problems.
+                        </p>
+                    </div>
+                </Collapsible.Content>
+            </Collapsible.Root>
+        </RadioGroup.Root>
+        <Separator />
+        <Button
+            class="w-full"
+            variant={ workComplete ? 'outline' : 'default' }
             disabled={ workerBusy }
-            class:disabled={ workerBusy }
-            on:click={ e => workComplete ? resetIfWorkComplete() : solve() }
-        >{@html workComplete ? 'Reset' : 'Solve' }</button>
-		{#if workerBusy}
-            <div id="loading" style="margin-top: 15px; margin-bottom: 15px" class="grid-x">
-                <div class="cell auto">
-                    <img src={ loadingGif } alt="loading" style="display: block; margin: auto">
-                </div>
-            </div>
+            onclick={ () => workComplete ? resetIfWorkComplete() : solve() }
+        >{ workComplete ? 'Reset' : 'Solve' }</Button>
+        {#if workerBusy}
+            <img src={ loadingGif } alt="loading" class="mx-auto block">
         {/if}
-		<a id="clear-button" style="display: none" class="button expanded">Clear</a>
-		{#if workComplete}
-            <div id="solution-info" class="callout" class:alert={ !foundSolution } class:primary={ foundSolution }>
-                {#if foundSolution } Found solution {:else} <strong>No solution</strong> {/if} in { (currentProblem.time / 1000).toFixed(3) } seconds.
-            </div>
+        {#if workComplete}
+            <Alert.Root id="solution-info" variant={ foundSolution ? 'default' : 'destructive' }>
+                <Alert.Description>
+                    {#if foundSolution} Found solution {:else} <strong>No solution</strong> {/if} in { (currentProblem.time / 1000).toFixed(3) } seconds.
+                </Alert.Description>
+            </Alert.Root>
         {/if}
-	</div>
+    </section>
 
-</div>
+</main>
 
 <style>
 #poly-create {
@@ -312,11 +304,9 @@
     }
 }
 
-.size-button {
-    font-size: 2em !important;
-    padding: 0.4em 0.2em 0.1em 0.2em;
+:global(.size-button) {
+    font-size: 1.5rem;
     transform: scaleX(-1);
-    color: black !important;
 }
 
 .tetromino {

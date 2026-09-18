@@ -1,15 +1,11 @@
 // CSS
-import './styles/theme.scss';
+import './styles/app.css';
 
-import Plausible from 'plausible-tracker';
-Plausible({
-    domain: 'cemulate.github.io/polyomino-solver',
-    apiHost: 'https://plausible.351321.xyz',
-}).enableAutoPageviews();
 
 import 'web-component-polyomino';
 
+import { mount } from 'svelte';
 import App from './App.svelte';
-const app = new App({
+const app = mount(App, {
     target: document.body,
 });

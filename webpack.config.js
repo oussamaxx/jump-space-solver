@@ -11,14 +11,24 @@ module.exports = {
     filename: '[name].bundle.js',
     path: path.resolve(__dirname, './dist')
   },
+  resolve: {
+    conditionNames: ['svelte', 'browser', 'import'],
+    alias: {
+      '$lib': path.resolve(__dirname, './src/lib'),
+    },
+  },
   module: {
     rules: [
       {
-        test: /\.svelte$/,
+        test: /\.(svelte|svelte\.js)$/,
         use: {
           loader: 'svelte-loader',
           options: {
             emitCss: true,
+            onwarn: (warning, handleWarning) => {
+              if (warning.filename && warning.filename.includes('node_modules')) return;
+              handleWarning(warning);
+            },
           },
         }
       },
@@ -27,16 +37,7 @@ module.exports = {
         use: [
           MiniCssExtractPlugin.loader,
           'css-loader',
-        ],
-      },
-      {
-        test: /\.scss$/,
-        use: [
-          {
-            loader: MiniCssExtractPlugin.loader,
-          },
-          'css-loader',
-          'sass-loader',
+          'postcss-loader',
         ],
       },
       {
