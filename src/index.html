@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
+        <script>
+            // Apply theme before first paint (dark unless the user chose light)
+            try {
+                if (localStorage.getItem('polyomino-solver-theme') !== 'light') document.documentElement.classList.add('dark');
+            } catch (e) { document.documentElement.classList.add('dark'); }
+        </script>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Polyomino Solver</title>
         <meta name="description" content="Solve general tetromino and polyomino tiling problems">
