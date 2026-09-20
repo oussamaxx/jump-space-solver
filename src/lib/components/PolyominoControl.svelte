@@ -282,4 +282,15 @@
     .grid-container.create-region .cell.active {
         outline: 2px solid black;
     }
+
+    /* Plain grids (custom shape drawing) would be black on black in dark mode */
+    :global(.dark) .grid-container:not(.grid-look) {
+        outline-color: #71717a;
+    }
+    :global(.dark) .grid-container:not(.grid-look) .cell {
+        outline-color: #71717a;
+    }
+    :global(.dark) .grid-container:not(.grid-look) .cell.active.white {
+        background-color: #e4e4e7;
+    }
 </style>
