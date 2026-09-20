@@ -1,4 +1,7 @@
 <script>
+    // Unique per instance so the bevel filter ids of several grids don't clash
+    const uid = Math.random().toString(36).slice(2, 8);
+
     let {
         // One of: 'create', 'create-region', 'display', or 'display-multiple'
         mode = 'create',
@@ -30,6 +33,9 @@
     const powered = $derived(mode == 'display-multiple');
 
     // Map "x,y" -> { classes, style, links } of the last polyomino covering that cell
+    // Game-style power grid: every cell is a metal tile, region cells are tinted glass
+    const gridLook = $derived(mode == 'display-multiple' || mode == 'create-region');
+
     const cellInfo = $derived.by(() => {
         const map = new Map();
         polys.forEach((p, index) => {
@@ -37,11 +43,12 @@
             const keys = new Set(p.map(([ x, y ]) => `${ x },${ y }`));
             for (const [ x, y ] of p) {
                 const key = `${ x },${ y }`;
-                const tint = index == regionIndex ? tints[key] : null;
+                const tint = index == regionIndex ? tints[key] : map.get(key)?.tint;
                 map.set(key, {
+                    tint,
                     info: mode == 'display-multiple' ? (index > 0 ? info?.[index - 1] : null) : mode == 'display' ? info : null,
-                    classes: `active ${ piece ? 'piece' : 'white' }`,
-                    style: tint ? `background-color: ${ tint }` : '',
+                    classes: `active ${ piece ? 'piece' : gridLook ? 'region' : 'white' }`,
+                    style: tint ? `--tint: ${ tint }` : '',
                     links: piece ? {
                         top: keys.has(`${ x },${ y + 1 }`),
                         bottom: keys.has(`${ x },${ y - 1 }`),
@@ -53,6 +60,20 @@
         });
         return map;
     });
+
+    // Cells of every piece with their links to neighbouring cells of the same piece
+    const pieceCells = $derived(polys.flatMap((p, index) => {
+        if (!isPiece(index)) return [];
+        const keys = new Set(p.map(([ x, y ]) => `${ x },${ y }`));
+        const color = (mode == 'display-multiple' ? info?.[index - 1] : mode == 'display' ? info : null)?.color;
+        return p.map(([ x, y ]) => ({
+            x, y: size - 1 - y, color,
+            top: keys.has(`${ x },${ y + 1 }`),
+            bottom: keys.has(`${ x },${ y - 1 }`),
+            left: keys.has(`${ x - 1 },${ y }`),
+            right: keys.has(`${ x + 1 },${ y }`),
+        }));
+    }));
 
     const cells = $derived(Array.from({ length: size * size }, (_, n) => [ Math.floor(n / size), n % size ]));
 
@@ -93,32 +114,47 @@
 <svelte:window onpointerup={ stopDrawing } onpointercancel={ stopDrawing } />
 
 <div {...rest} class="polyomino-control {className}">
-    <div class="grid-container {mode}"
+    <div class="grid-container {mode}" class:grid-look={ gridLook }
          style="grid-template: repeat({size}, 1fr) / repeat({size}, 1fr)">
         {#each cells as [ x, y ] (`${ x },${ y }`)}
             <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div class="cell {cellInfo.get(`${ x },${ y }`)?.classes ?? ''}"
+            <div class="cell {gridLook ? 'tile ' : ''}{cellInfo.get(`${ x },${ y }`)?.classes ?? ''}"
                  style="grid-column: {x + 1}; grid-row: {size - y}; {cellInfo.get(`${ x },${ y }`)?.style ?? ''}"
                  onpointerdown={ editable ? e => onPointerDown(e, x, y) : null }
                  onpointerenter={ editable ? e => onPointerEnter(e, x, y) : e => showTip(e, `${ x },${ y }`) }
                  onpointermove={ editable ? null : e => showTip(e, `${ x },${ y }`) }
                  onpointerleave={ editable ? null : () => tip = null }
             >
-                {#if cellInfo.get(`${ x },${ y }`)?.links}
-                    {@const l = cellInfo.get(`${ x },${ y }`).links}
-                    {@const n = [ l.top, l.bottom, l.left, l.right ].filter(Boolean).length}
-                    <svg class="circuit" class:powered viewBox="0 0 100 100">
-                        {#if l.top}<line x1="50" y1="50" x2="50" y2="0" />{/if}
-                        {#if l.bottom}<line x1="50" y1="50" x2="50" y2="100" />{/if}
-                        {#if l.left}<line x1="50" y1="50" x2="0" y2="50" />{/if}
-                        {#if l.right}<line x1="50" y1="50" x2="100" y2="50" />{/if}
-                        {#if n != 2 || (l.top || l.bottom) && (l.left || l.right)}
-                            <circle cx="50" cy="50" r={ n == 0 ? 15 : 12 } />
-                        {/if}
-                    </svg>
-                {/if}
             </div>
         {/each}
+        <!-- Pieces are drawn as one shape each: rects are stroked first, then filled, so only the outer outline shows -->
+        <svg class="pieces" viewBox="0 0 {size} {size}" preserveAspectRatio="none">
+    {#snippet shape(dx, dy, m)}
+        {#each pieceCells as c}
+            <rect x={ c.x + 0.12 + m + dx } y={ c.y + 0.12 + m + dy } width={ 0.76 - 2 * m } height={ 0.76 - 2 * m } rx="0.08" />
+            {#if c.right}<rect x={ c.x + 0.5 + dx } y={ c.y + 0.12 + m + dy } width="1" height={ 0.76 - 2 * m } />{/if}
+            {#if c.bottom}<rect x={ c.x + 0.12 + m + dx } y={ c.y + 0.5 + dy } width={ 0.76 - 2 * m } height="1" />{/if}
+        {/each}
+    {/snippet}
+            <clipPath id="clip-{uid}"><g>{@render shape(0, 0, 0)}</g></clipPath>
+            <!-- Bevel: dark base, light top-left edge (shifted copy clipped to the shape), flat body inset on top -->
+            <g class="plate-outline">{@render shape(0, 0, 0)}</g>
+            <g class="plate-base">{@render shape(0, 0, 0)}</g>
+            <g class="plate-light" clip-path="url(#clip-{uid})">{@render shape(-0.035, -0.035, 0)}</g>
+            <g class="plate-body">{@render shape(0, 0, 0.035)}</g>
+            {#each pieceCells as c}
+                {@const n = [ c.top, c.bottom, c.left, c.right ].filter(Boolean).length}
+                <g class="circuit" class:powered style={ c.color ? `--line: ${ c.color }` : '' }>
+                    {#if c.top}<line x1={ c.x + 0.5 } y1={ c.y + 0.5 } x2={ c.x + 0.5 } y2={ c.y } />{/if}
+                    {#if c.bottom}<line x1={ c.x + 0.5 } y1={ c.y + 0.5 } x2={ c.x + 0.5 } y2={ c.y + 1 } />{/if}
+                    {#if c.left}<line x1={ c.x + 0.5 } y1={ c.y + 0.5 } x2={ c.x } y2={ c.y + 0.5 } />{/if}
+                    {#if c.right}<line x1={ c.x + 0.5 } y1={ c.y + 0.5 } x2={ c.x + 1 } y2={ c.y + 0.5 } />{/if}
+                    {#if n != 2 || (c.top || c.bottom) && (c.left || c.right)}
+                        <circle cx={ c.x + 0.5 } cy={ c.y + 0.5 } r={ n == 0 ? 0.15 : 0.12 } />
+                    {/if}
+                </g>
+            {/each}
+        </svg>
     </div>
 </div>
 
@@ -163,11 +199,17 @@
         user-select: none;
     }
     .grid-container {
+        position: relative;
         display: grid;
         width: 100%;
         height: 100%;
         outline: 2px solid black;
         grid-gap: 2px;
+    }
+    .grid-container.grid-look {
+        outline: none;
+        grid-gap: 1px;
+        background: #0a0a0c;
     }
     .grid-container.display, .grid-container.display-multiple {
         outline: none;
@@ -179,33 +221,51 @@
 
     .cell.active.white { background-color: white }
 
-    .cell.active.piece {
+    /* Metal floor tile with a bolt, like the in-game power grid */
+    .cell.tile {
         position: relative;
-        background-color: #475569;
-        border: 1px solid #64748b;
-        border-radius: 4px;
-        box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.5);
         outline: none !important;
+        border-radius: 3px;
+        border: 1px solid #0a0a0c;
+        background:
+            radial-gradient(circle at 50% 50%, #17171a 0 9%, #55565c 10% 14%, #1b1b1f 15% 22%, transparent 23%),
+            linear-gradient(145deg, #34353b, #1f2023);
+        box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6);
     }
-    .circuit {
+    /* Translucent green/blue glass over the tile */
+    .cell.tile.region, .cell.tile.piece {
+        --tint: #22c55e;
+        border-color: color-mix(in srgb, var(--tint) 90%, white 10%);
+        background:
+            radial-gradient(circle at 50% 50%, transparent 0 9%, color-mix(in srgb, var(--tint) 60%, white) 10% 13%, transparent 14%),
+            linear-gradient(color-mix(in srgb, var(--tint) 55%, transparent), color-mix(in srgb, var(--tint) 55%, transparent)),
+            linear-gradient(145deg, #34353b, #1f2023);
+        box-shadow: inset 0 0 8px color-mix(in srgb, var(--tint) 70%, transparent);
+    }
+    /* A component: a metal block that leaves the tinted tile visible at its unlinked edges */
+    .cell.tile.piece {
+        background:
+            linear-gradient(color-mix(in srgb, var(--tint) 55%, transparent), color-mix(in srgb, var(--tint) 55%, transparent)),
+            linear-gradient(145deg, #34353b, #1f2023);
+    }
+    .pieces {
         position: absolute;
         inset: 0;
         width: 100%;
         height: 100%;
         pointer-events: none;
     }
+    .plate-outline rect { fill: #2a2b30; stroke: #2a2b30; stroke-width: 0.045; }
+    .plate-base rect { fill: #3d3e44; }
+    .plate-light rect { fill: #b4b6be; }
+    .plate-body rect { fill: #6f717a; }
     .circuit line {
-        stroke: #f87171;
-        stroke-width: 8px;
+        stroke: var(--line, #f3e3c3);
+        stroke-width: 0.09;
         stroke-linecap: round;
-        filter: drop-shadow(0 0 1px #991b1b);
+        filter: drop-shadow(0.01px 0.02px 0.015px rgba(0, 0, 0, 0.7));
     }
-    .circuit circle {
-        fill: #f87171;
-        filter: drop-shadow(0 0 1px #991b1b);
-    }
-    .circuit.powered line { stroke: #4ade80; filter: drop-shadow(0 0 4px #22c55e); }
-    .circuit.powered circle { fill: #4ade80; filter: drop-shadow(0 0 4px #22c55e); }
+    .circuit circle { fill: var(--line, #f3e3c3); }
 
     .grid-container.display .cell {
         outline: none;

@@ -9,6 +9,7 @@
     import * as RadioGroup from '$lib/components/ui/radio-group';
     import * as Collapsible from '$lib/components/ui/collapsible';
     import * as Dialog from '$lib/components/ui/dialog';
+    import * as AlertDialog from '$lib/components/ui/alert-dialog';
 
     import PolyominoControl from '$lib/components/PolyominoControl.svelte';
 
@@ -71,8 +72,11 @@
     let pickerSlot = null;
     let pickerOpen = false;
     function openPicker(slot) {
-        pickerSlot = slot;
-        pickerOpen = true;
+        // Changing a generator invalidates the displayed solution, so confirm before resetting the view.
+        resetIfWorkComplete(true, () => {
+            pickerSlot = slot;
+            pickerOpen = true;
+        });
     }
     function pickGenerator(generator) {
         const current = selectedGenerators[pickerSlot.id];
@@ -132,8 +136,27 @@
     // Technical state
     let currentProblem = { problemData: null, time: null, solutionCoords: null };
 
-    function resetIfWorkComplete() {
-        if (workComplete) currentProblem = {};
+    let resetConfirmOpen = false;
+    let onResetConfirmed = null;
+
+    // With `confirmFirst`, asks the user before clearing the solution and only then runs `onDone`.
+    function resetIfWorkComplete(confirmFirst = false, onDone = null) {
+        if (!workComplete) { onDone?.(); return; }
+        if (confirmFirst) {
+            onResetConfirmed = onDone;
+            resetConfirmOpen = true;
+            return;
+        }
+        currentProblem = {};
+        onDone?.();
+    }
+
+    function confirmReset() {
+        currentProblem = {};
+        resetConfirmOpen = false;
+        const cb = onResetConfirmed;
+        onResetConfirmed = null;
+        cb?.();
     }
 
     // When viewing the solution, any change to the settings should reset the UI.
@@ -356,7 +379,7 @@
             class="w-full"
             variant={ workComplete ? 'outline' : 'default' }
             disabled={ workerBusy }
-            onclick={ () => workComplete ? resetIfWorkComplete() : solve() }
+            onclick={ () => workComplete ? resetIfWorkComplete(true) : solve() }
         >{ workComplete ? 'Reset' : 'Solve' }</Button>
         {#if workerBusy}
             <img src={ loadingGif } alt="loading" class="mx-auto block">
@@ -371,6 +394,21 @@
     </section>
 
 </main>
+
+<AlertDialog.Root bind:open={ resetConfirmOpen }>
+    <AlertDialog.Content>
+        <AlertDialog.Header>
+            <AlertDialog.Title>Discard current solution?</AlertDialog.Title>
+            <AlertDialog.Description>
+                Continuing will reset the solution view and return to the editor.
+            </AlertDialog.Description>
+        </AlertDialog.Header>
+        <AlertDialog.Footer>
+            <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+            <AlertDialog.Action onclick={ confirmReset }>Reset</AlertDialog.Action>
+        </AlertDialog.Footer>
+    </AlertDialog.Content>
+</AlertDialog.Root>
 
 <Dialog.Root bind:open={ pickerOpen }>
     <Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-sm">
