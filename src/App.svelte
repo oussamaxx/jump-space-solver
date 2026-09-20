@@ -32,6 +32,7 @@
         method: 'method-dlx',
         allowRotation: true,
         allowReflection: false,
+        maxSolutions: 3,
     }
     let settingsOpen = false;
     // selectedGenerators[slot.id] = { generator, variant } (objects from generators.js)
@@ -166,7 +167,14 @@
     // Inferences based on currentProblem
     $: working = currentProblem.problemData != null && currentProblem.time == null;
     $: workComplete = currentProblem.time != null;
-    $: foundSolution = currentProblem.solutionCoords != null;
+    $: foundSolution = (currentProblem.solutions?.length ?? 0) > 0;
+    $: currentSolution = foundSolution ? currentProblem.solutions[currentProblem.solutionIndex] : null;
+
+    function showSolution(delta) {
+        const count = currentProblem.solutions.length;
+        currentProblem.solutionIndex = (currentProblem.solutionIndex + delta + count) % count;
+        currentProblem = currentProblem;
+    }
 
     // Worker and worker status
     let worker = new SatSolverWorker();
@@ -190,21 +198,25 @@
         if (event.data == 'z3Loaded') {
             return workerBusy = false;
         } else {
-            let { solution, time } = event.data;
+            let { solutions, partial, time } = event.data;
+            // No exact fit: the worker sends its best partial placement instead
+            currentProblem.partial = partial ? { unplaced: partial.unplaced, cellsPlaced: partial.cellsPlaced } : null;
+            if (partial) solutions = [ partial.solution ];
             // Update currentProblem based on worker results
 
             currentProblem.time = time;
 
-            if (event.data.solution != null) {
+            // The solver works on the region normalized to the origin; shift
+            // everything back so it lines up with the user's original grid.
+            const { dx, dy } = currentProblem.offset || { dx: 0, dy: 0 };
+            currentProblem.solutions = solutions.map(solution => ({
                 // Data for polyomino-control in 'display-multiple' mode; the
                 // first coords represent the problem region, drawn in white.
-                // The solver works on the region normalized to the origin; shift
-                // everything back so it lines up with the user's original grid.
-                const { dx, dy } = currentProblem.offset || { dx: 0, dy: 0 };
-                currentProblem.solutionCoords = solution.map(x => x.coords.map(([ cx, cy ]) => [ cx + dx, cy + dy ]));
+                coords: solution.map(x => x.coords.map(([ cx, cy ]) => [ cx + dx, cy + dy ])),
                 // Component info of each placed piece (the region, first, has none)
-                currentProblem.solutionInfo = solution.slice(1).map(x => polyominoInfo[x.pieceIndex] ?? null);
-            }
+                info: solution.slice(1).map(x => polyominoInfo[x.pieceIndex] ?? null),
+            }));
+            currentProblem.solutionIndex = 0;
             return workerBusy = false;
         }
     }
@@ -226,7 +238,7 @@
 
         currentProblem = { problemData, offset: { dx, dy } };
 
-        worker.postMessage({ type: solveMethod, problem: problemData });
+        worker.postMessage({ type: solveMethod, problem: problemData, maxSolutions: Math.max(1, settings.maxSolutions | 0) });
         workerBusy = true;
     }
 </script>
@@ -264,8 +276,8 @@
                             size={ regionCreateSize }
                             tints={ regionTints }
                             mode="display-multiple"
-                            value={ currentProblem.solutionCoords || [] }
-                            info={ currentProblem.solutionInfo || [] }
+                            value={ currentSolution?.coords || [] }
+                            info={ currentSolution?.info || [] }
                     />
                 {:else}
                     <PolyominoControl
@@ -384,10 +396,23 @@
         {#if workerBusy}
             <img src={ loadingGif } alt="loading" class="mx-auto block">
         {/if}
+        {#if workComplete && foundSolution && currentProblem.solutions.length > 1}
+            <div class="flex items-center justify-center gap-4">
+                <Button variant="outline" aria-label="Previous solution" onclick={() => showSolution(-1) }>‹ Prev</Button>
+                <span class="text-sm">Solution { currentProblem.solutionIndex + 1 } / { currentProblem.solutions.length }</span>
+                <Button variant="outline" aria-label="Next solution" onclick={() => showSolution(1) }>Next ›</Button>
+            </div>
+        {/if}
         {#if workComplete}
-            <Alert.Root id="solution-info" variant={ foundSolution ? 'default' : 'destructive' }>
+            <Alert.Root id="solution-info" variant={ foundSolution && !currentProblem.partial ? 'default' : 'destructive' }>
                 <Alert.Description>
-                    {#if foundSolution} Found solution {:else} <strong>No solution</strong> {/if} in { (currentProblem.time / 1000).toFixed(3) } seconds.
+                    {#if currentProblem.partial}
+                        <strong>No complete solution.</strong> Showing the best fit: { polyominos.length - currentProblem.partial.unplaced.length } of { polyominos.length } components placed
+                        ({ currentProblem.partial.cellsPlaced } cells)
+                        {#if currentProblem.partial.unplaced.length}
+                            — not placed: { currentProblem.partial.unplaced.map(i => polyominoInfo[i]?.name ?? `custom shape #${ i + 1 }`).join(', ') }
+                        {/if}
+                    {:else if foundSolution} Found { currentProblem.solutions.length } { currentProblem.solutions.length == 1 ? 'solution' : 'solutions' } {:else} <strong>No solution</strong> {/if} in { (currentProblem.time / 1000).toFixed(3) } seconds.
                 </Alert.Description>
             </Alert.Root>
         {/if}
@@ -449,6 +474,13 @@
             <div class="flex items-center gap-2">
                 <Checkbox id="allow-reflection" bind:checked={ settings.allowReflection } />
                 <Label for="allow-reflection">Allow reflections</Label>
+            </div>
+            <div class="flex items-center gap-2">
+                <Label for="max-solutions">Number of solutions</Label>
+                <input id="max-solutions" type="number" min="1" max="50" step="1"
+                       class="h-8 w-20 border bg-transparent px-2 text-sm"
+                       bind:value={ settings.maxSolutions }
+                       onchange={() => settings.maxSolutions = Math.min(50, Math.max(1, Math.round(settings.maxSolutions) || 1)) } />
             </div>
             <Separator />
             <RadioGroup.Root bind:value={ settings.method }>
