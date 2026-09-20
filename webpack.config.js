@@ -2,11 +2,14 @@ const path = require('path');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
-module.exports = {
+module.exports = (env, argv) => {
+  const isProd = argv.mode === 'production';
+  return {
   context: path.resolve(__dirname, './src'),
   entry: {
     app: './app.js',
   },
+  devtool: isProd ? false : 'source-map',
   output: {
     filename: '[name].bundle.js',
     path: path.resolve(__dirname, './dist')
@@ -25,6 +28,7 @@ module.exports = {
           loader: 'svelte-loader',
           options: {
             emitCss: true,
+            compilerOptions: { dev: !isProd },
             onwarn: (warning, handleWarning) => {
               if (warning.filename && warning.filename.includes('node_modules')) return;
               handleWarning(warning);
@@ -36,8 +40,8 @@ module.exports = {
         test: /\.css$/,
         use: [
           MiniCssExtractPlugin.loader,
-          'css-loader',
-          'postcss-loader',
+          { loader: 'css-loader', options: { sourceMap: !isProd } },
+          { loader: 'postcss-loader', options: { sourceMap: !isProd } },
         ],
       },
       {
@@ -61,4 +65,5 @@ module.exports = {
       ],
     }),
   ],
+  };
 };

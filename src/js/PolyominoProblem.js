@@ -291,7 +291,10 @@ export default class PolyominoProblem {
                 const coordIndices = findOneIndices(row.slice(paddedPieces.length));
                 if (pieceIndex < this.pieces.length) {
                     // Only account for the user's pieces, not the placeholder blocks.
-                    pieces.push(new Polyomino(coordIndices.map(i => this.region.coords[i])));
+                    const placed = new Polyomino(coordIndices.map(i => this.region.coords[i]));
+                    // Remember which input piece this is (survives postMessage) so the UI can label it
+                    placed.pieceIndex = pieceIndex;
+                    pieces.push(placed);
                 }
             }
             return pieces;

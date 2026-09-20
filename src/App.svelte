@@ -10,7 +10,9 @@
     import * as Collapsible from '$lib/components/ui/collapsible';
     import * as Dialog from '$lib/components/ui/dialog';
 
-    import { Polyomino, tetrominos } from './js/Polyomino.js';
+    import PolyominoControl from '$lib/components/PolyominoControl.svelte';
+
+    import { Polyomino, componentsByCategory } from './js/Polyomino.js';
     import { generatorSlots } from './js/generators.js';
     import SatSolverWorker from 'worker-loader!./js/SatSolverWorker.js';
 
@@ -22,6 +24,8 @@
 
     // UI Data
 	let polyominos = localState.savedPolyomino || [];
+    // { name, category, color } per entry of `polyominos` (null for custom shapes)
+    let polyominoInfo = polyominos.map((_, i) => localState.savedInfo?.[i] ?? null);
     let regionCoords = localState.regionCoords || [];
     let settings = {
         method: 'method-dlx',
@@ -29,16 +33,61 @@
         allowReflection: false,
     }
     let settingsOpen = false;
-    let selectedGenerators = { reactor: null, aux1: null, aux2: null };
+    // selectedGenerators[slot.id] = { generator, variant } (objects from generators.js)
+    function restoreGenerators(saved = {}) {
+        const result = { reactor: null, aux1: null, aux2: null };
+        for (const slot of generatorSlots) {
+            const generator = slot.options.find(g => g.id == saved[slot.id]?.generator);
+            const variant = generator?.variants.find(v => v.id == saved[slot.id]?.variant);
+            if (variant) result[slot.id] = { generator, variant };
+        }
+        return result;
+    }
+    let selectedGenerators = restoreGenerators(localState.generators);
+    const cellTypeColors = { 1: '#22c55e', 2: '#3b82f6' }; // 1 = powered (green), 2 = protected (blue)
+
+    // Turns the selected generator layouts into region cells (rows are listed top to
+    // bottom, while y grows upwards) and the color of each of those cells.
+    function computeRegion(selected, gridSize) {
+        const coords = [];
+        const tints = {};
+        let rowOffset = 0;
+        for (const slot of generatorSlots) {
+            const layout = selected[slot.id]?.variant.layout || [];
+            layout.forEach((row, r) => row.forEach((cell, c) => {
+                const y = gridSize - 1 - (rowOffset + r);
+                if (cell == 0 || c >= gridSize || y < 0) return;
+                coords.push([ c, y ]);
+                tints[`${ c },${ y }`] = cellTypeColors[cell];
+            }));
+            rowOffset += slot.rows;
+        }
+        return { coords, tints };
+    }
+    $: regionTints = computeRegion(selectedGenerators, regionCreateSize).tints;
+    function applyGenerators() {
+        regionCoords = computeRegion(selectedGenerators, regionCreateSize).coords;
+    }
     let pickerSlot = null;
     let pickerOpen = false;
     function openPicker(slot) {
         pickerSlot = slot;
         pickerOpen = true;
     }
-    function pickGenerator(name) {
-        selectedGenerators[pickerSlot.id] = name;
+    function pickGenerator(generator) {
+        const current = selectedGenerators[pickerSlot.id];
+        // Keep the same MK when switching generator, if it exists
+        const variant = generator.variants.find(v => v.id == current?.variant.id) || generator.variants[0];
+        selectedGenerators[pickerSlot.id] = { generator, variant };
+        applyGenerators();
+    }
+    function pickVariant(variant) {
+        selectedGenerators[pickerSlot.id].variant = variant;
+        applyGenerators();
         pickerOpen = false;
+    }
+    function describeSelection(selection) {
+        return selection ? `${ selection.generator.name } ${ selection.variant.label }` : null;
     }
     let polyCreateSize = 7;
     let regionCreateSize = localState.size || 8;
@@ -68,13 +117,17 @@
         persistTimeout = setTimeout(() => {
             localStorage.setItem('polyomino-solver-state', JSON.stringify({
                 savedPolyomino: polyominos,
+                savedInfo: polyominoInfo,
                 size: regionCreateSize,
                 regionCoords,
+                generators: Object.fromEntries(Object.entries(selectedGenerators)
+                    .filter(([ , sel ]) => sel)
+                    .map(([ id, sel ]) => [ id, { generator: sel.generator.id, variant: sel.variant.id } ])),
             }));
         }, 1500);
     }
 
-    $: polyominos, regionCreateSize, regionCoords, persistStateDebounced();
+    $: polyominos, regionCreateSize, regionCoords, selectedGenerators, persistStateDebounced();
 
     // Technical state
     let currentProblem = { problemData: null, time: null, solutionCoords: null };
@@ -102,11 +155,12 @@
         workerBusy = true;
     }
 
-    let polyCreateEl;
+    let polyCreateCoords = [];
     function addCustomPolyomino() {
         // Normalize the coordinates first
-        let p = new Polyomino(polyCreateEl.value).normalize();
+        let p = new Polyomino(polyCreateCoords).normalize();
         polyominos = [ ...polyominos, p.coords ];
+        polyominoInfo = [ ...polyominoInfo, null ];
     }
 
     function handleWorkerMessage(event) {
@@ -121,34 +175,33 @@
             if (event.data.solution != null) {
                 // Data for polyomino-control in 'display-multiple' mode; the
                 // first coords represent the problem region, drawn in white.
-                currentProblem.solutionCoords = solution.map(x => x.coords);
+                // The solver works on the region normalized to the origin; shift
+                // everything back so it lines up with the user's original grid.
+                const { dx, dy } = currentProblem.offset || { dx: 0, dy: 0 };
+                currentProblem.solutionCoords = solution.map(x => x.coords.map(([ cx, cy ]) => [ cx + dx, cy + dy ]));
+                // Component info of each placed piece (the region, first, has none)
+                currentProblem.solutionInfo = solution.slice(1).map(x => polyominoInfo[x.pieceIndex] ?? null);
             }
             return workerBusy = false;
         }
     }
 
-    // Makeshift two-way binding on create-region control
-    let regionCreateEl = null;
-    $: if (regionCreateEl != null && regionCreateEl.value != regionCoords) {
-        regionCreateEl.value = regionCoords;
-    }
-
     function solve() {
-        // The solving machinery will normalize the region coordinates, shifting
-        // it as close to the origin as possible. Do this on the user's region
-        // coordinates now, to avoid a perceived incongruity upon reset.
-        regionCoords = new Polyomino(regionCoords).normalize().coords;
+        // The solving machinery normalizes the region (shifts it to the origin).
+        // Remember the shift so the solution can be mapped back onto the grid.
+        const dx = regionCoords.length ? Math.min(...regionCoords.map(c => c[0])) : 0;
+        const dy = regionCoords.length ? Math.min(...regionCoords.map(c => c[1])) : 0;
 
         let problemData = {
             pieces: polyominos,
-            region: regionCoords,
+            region: regionCoords.map(([ x, y ]) => [ x - dx, y - dy ]),
             allowRotation: settings.allowRotation,
             allowReflection: settings.allowReflection,
         };
 
         let solveMethod = settings.method.split('-')[1];
 
-        currentProblem = { problemData };
+        currentProblem = { problemData, offset: { dx, dy } };
 
         worker.postMessage({ type: solveMethod, problem: problemData });
         workerBusy = true;
@@ -175,28 +228,30 @@
                     <button type="button"
                             class="flex min-h-0 cursor-pointer flex-col items-start rounded-none border-2 p-2 text-left text-sm hover:bg-accent"
                             style="flex: {slot.rows} 1 0"
-                            on:click={() => openPicker(slot) }>
+                            onclick={() => openPicker(slot) }>
                         <span class="font-semibold">{ slot.label }</span>
-                        <span class="text-xs { selectedGenerators[slot.id] ? '' : 'text-muted-foreground' }">{ selectedGenerators[slot.id] || 'Click to select' }</span>
+                        <span class="text-xs { selectedGenerators[slot.id] ? '' : 'text-muted-foreground' }">{ describeSelection(selectedGenerators[slot.id]) || 'Click to select' }</span>
                     </button>
                 {/each}
             </div>
             <div class="min-w-0 flex-1">
                 {#if (workComplete && foundSolution)}
-                    <polyomino-control
+                    <PolyominoControl
                             id="solution-display"
                             size={ regionCreateSize }
+                            tints={ regionTints }
                             mode="display-multiple"
                             value={ currentProblem.solutionCoords || [] }
-                    ></polyomino-control>
+                            info={ currentProblem.solutionInfo || [] }
+                    />
                 {:else}
-                    <polyomino-control
+                    <PolyominoControl
                             id="region-create"
-                            bind:this={ regionCreateEl }
                             size={ regionCreateSize }
-                            on:change={ e => regionCoords = e.target.value }
+                            bind:value={ regionCoords }
+                            tints={ regionTints }
                             mode="create-region"
-                    ></polyomino-control>
+                    />
                 {/if}
             </div>
         </div>
@@ -207,7 +262,7 @@
             <Button variant="outline" class="size-button" disabled={ workComplete }
                     title="grid size up" onclick={() => regionCreateSize += 1}>⇱</Button>-->
             <Button variant="outline" class="size-button" disabled={ workComplete }
-                    title="clear" onclick={() => regionCoords = []}>⎚</Button>
+                    title="clear" onclick={() => { regionCoords = []; selectedGenerators = restoreGenerators(); }}>⎚</Button>
         </div>
     </section>
 
@@ -215,16 +270,17 @@
         <p class="mb-2 font-semibold">Components to be fit <span class="text-xs font-normal text-muted-foreground">(click to remove)</span></p>
         <div class="border p-3">
             {#each polyominos as coords, index (coords) }
-                <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-                <polyomino-control
+                <PolyominoControl
                         size={ largestPolySize }
                         mode="display"
                         class="tetromino"
                         value={ coords }
-                        on:click={ e => {
+                        info={ polyominoInfo[index] }
+                        onclick={ () => {
                         polyominos = polyominos.toSpliced(index, 1);
+                        polyominoInfo = polyominoInfo.toSpliced(index, 1);
                     } }
-                ></polyomino-control>
+                />
             {/each}
         </div>
     </section>
@@ -240,26 +296,56 @@
         </Tabs.Root>
 
         <div class="mt-4" class:hidden={ selectedTab != 'custom-shape' }>
-            <polyomino-control id="poly-create" bind:this={ polyCreateEl } size={ polyCreateSize }></polyomino-control>
+            <PolyominoControl id="poly-create" size={ polyCreateSize } bind:value={ polyCreateCoords } />
             <div class="flex items-center gap-2">
                 <Button variant="outline" class="size-button" title="grid size down" onclick={() => polyCreateSize = Math.max(2, polyCreateSize - 1) }>⇲</Button>
                 <Button variant="outline" class="size-button" title="grid size up" onclick={() => polyCreateSize += 1}>⇱</Button>
-                <Button variant="outline" class="size-button" title="clear" onclick={() => polyCreateEl.value = [] }>⎚</Button>
+                <Button variant="outline" class="size-button" title="clear" onclick={() => polyCreateCoords = [] }>⎚</Button>
                 <Button class="flex-1" onclick={ addCustomPolyomino }>Add</Button>
             </div>
         </div>
-        <div class="mt-4" class:hidden={ selectedTab != 'components' }>
-            {#each Object.entries(tetrominos) as [ name, tetromino ]}
-                <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-                <polyomino-control
-                    size="4"
-                    mode="display"
-                    class="tetromino"
-                    value={ tetromino.coords }
-                    on:click={ e => {
-                        polyominos = [ ...polyominos, [ ...e.target.value ] ];
-                    } }
-                ></polyomino-control>
+        <div class="mt-4 max-h-[70vh] overflow-y-auto pr-1" class:hidden={ selectedTab != 'components' }>
+            {#each componentsByCategory as group}
+                <div class="mb-5">
+                    <div class="mb-1 flex items-center gap-2 px-2">
+                        <span class="size-2.5 rounded-full" style="background: {group.color}"></span>
+                        <h3 class="text-sm font-semibold">{ group.label }</h3>
+                        <span class="ml-auto text-xs text-muted-foreground">{ group.components.length }</span>
+                    </div>
+                    <Separator />
+                    <ul class="divide-y">
+                        {#each group.components as comp}
+                            <li>
+                                <button
+                                    type="button"
+                                    class="flex h-[72px] w-full cursor-pointer items-center gap-3 px-2 text-left text-sm transition-colors hover:bg-accent"
+                                    title="Add { comp.name }"
+                                    onclick={ () => {
+                                        polyominos = [ ...polyominos, [ ...comp.polyomino.coords ] ];
+                                        polyominoInfo = [ ...polyominoInfo, { name: comp.name, category: comp.category, color: group.color } ];
+                                    } }
+                                >
+                                    <span class="flex-1">{ comp.name }</span>
+                                    <span class="flex h-full w-[100px] flex-none items-center justify-end">
+                                    <span
+                                        class="relative flex-none overflow-hidden"
+                                        style="width: { comp.polyomino.getWidth() * 20 }px; height: { comp.polyomino.getHeight() * 20 }px"
+                                    >
+                                        <PolyominoControl
+                                            size={ comp.polyomino.getSize() }
+                                            mode="display"
+                                            class="pointer-events-none absolute bottom-0 left-0"
+                                            style="width: { comp.polyomino.getSize() * 20 }px; height: { comp.polyomino.getSize() * 20 }px"
+                                            value={ comp.polyomino.coords }
+                                            info={{ name: comp.name, category: comp.category, color: group.color }}
+                                        />
+                                    </span>
+                                    </span>
+                                </button>
+                            </li>
+                        {/each}
+                    </ul>
+                </div>
             {/each}
         </div>
     </section>
@@ -293,10 +379,20 @@
         </Dialog.Header>
         <div class="flex flex-col gap-2">
             {#if pickerSlot}
-                {#each pickerSlot.options as option}
-                    <Button variant={ selectedGenerators[pickerSlot.id] == option ? 'default' : 'outline' }
-                            onclick={() => pickGenerator(option) }>{ option }</Button>
+                {#each pickerSlot.options as option (option.id)}
+                    <Button variant={ selectedGenerators[pickerSlot.id]?.generator.id == option.id ? 'default' : 'outline' }
+                            onclick={() => pickGenerator(option) }>{ option.name }</Button>
                 {/each}
+                {#if selectedGenerators[pickerSlot.id]}
+                    <Separator />
+                    <div class="flex gap-2">
+                        {#each selectedGenerators[pickerSlot.id].generator.variants as variant (variant.id)}
+                            <Button class="flex-1"
+                                    variant={ selectedGenerators[pickerSlot.id].variant.id == variant.id ? 'default' : 'outline' }
+                                    onclick={() => pickVariant(variant) }>{ variant.label }</Button>
+                        {/each}
+                    </div>
+                {/if}
             {/if}
         </div>
     </Dialog.Content>
@@ -358,15 +454,11 @@
 </Dialog.Root>
 
 <style>
-#poly-create {
-    --cell-color: cyan;
-}
-
-#region-create, #solution-display {
+    :global(#region-create), :global(#solution-display) {
     background: lightgray;
 }
 
-#poly-create, #region-create, #solution-display {
+    :global(#poly-create), :global(#region-create), :global(#solution-display) {
     margin-bottom: 10px;
     width: 100%;
     aspect-ratio: 1;
@@ -381,15 +473,10 @@
     transform: scaleX(-1);
 }
 
-.tetromino {
+:global(.tetromino) {
     width: 60px;
     height: 60px;
     display: inline-block;
     margin: 0 10px 15px 10px;
-    --cell-color: lightgreen;
-}
-
-.tetromino:hover {
-    --cell-color: lightblue;
 }
 </style>
