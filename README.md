@@ -1,40 +1,34 @@
-# Polyomino Solver
+# Jump Space Reactor Solver
 
-Try it [here](https://cemulate.github.io/polyomino-solver).
+A web app that helps you plan your ship's power grid layout in [Jump Space](https://jumpspacegame.com/) ([Steam](https://store.steampowered.com/app/1757300/Jump_Space/)).
 
-Construct a collection of standard and/or completely custom polyominos, and an arbitrary region to fit them in, and this web app will find and display a valid tiling that places all of the polyominos in the region (if it exists).
+Pick your ship components, then choose a reactor and two aux generators. The generators define the powered/protected cells, and the app finds a tiling that fits your components into them. If everything can't fit, it falls back to a partial solution. You can also draw custom pieces and regions by hand (if ever the project was no longer maintained).
 
-Uses [web-component-polyomino](https://github.com/cemulate/web-component-polyomino) for building, manipulating, and displaying polyominos.
+![Screenshot](screenshot.png)
 
-# How it works
+Built with Svelte, Tailwind and shadcn-svelte. Solving runs in a Web Worker.
+
+
+## How it works
 
 ### Algorithm X
 
-Knuth's "Algorithm X" (implemented with "Dancing Links") is the best algorithm to handle this problem, by reducing it to an [Exact Cover Problem](https://en.wikipedia.org/wiki/Exact_cover).
-The details are explained by Knuth himself in [his paper](https://arxiv.org/abs/cs/0011047).
-I use [dlxlib](https://github.com/taylorjg/dlxlibjs/blob/master/src/dlx.js) as an implementation of Dancing Links, courtesy of [taylorgj](https://github.com/taylorjg).
-Though the name suggests otherwise, this method can find inexact solutions as well, by adding single-block placeholder pieces to the exact cover problem.
+Knuth's "Algorithm X" (implemented with "Dancing Links") handles this problem by reducing it to an [Exact Cover Problem](https://en.wikipedia.org/wiki/Exact_cover). The details are explained by Knuth in [his paper](https://arxiv.org/abs/cs/0011047). [dlxlib](https://github.com/taylorjg/dlxlibjs) by [taylorjg](https://github.com/taylorjg) provides the Dancing Links implementation. Despite the name, this method also finds inexact solutions, by adding single-block placeholder pieces to the exact cover problem.
 
 ### Legacy methods
 
-The other two solving methods are much less efficient, and were the solutions I first implemented a long time ago.
+Two older, much slower backends are still in the code:
 
-#### Converstion to SAT
+- **SAT**: the tiling is converted to [CNF](https://en.wikipedia.org/wiki/Conjunctive_normal_form) (one variable per possible piece placement, with clauses forcing each piece into exactly one placement and forbidding overlaps) and solved with [boolean-sat](https://www.npmjs.com/package/boolean-sat).
+- **Z3**: the problem is converted to [SMT-LIB](http://smtlib.cs.uiowa.edu/) and solved with the [WebAssembly build](https://github.com/cpitclaudel/z3.wasm) of [Z3](https://github.com/Z3Prover/z3).
 
-It's known that for arbitrary grids and arbitrary sets of [polyominos](https://en.wikipedia.org/wiki/Polyomino), the problem of deciding whether or not the polyominos can fit together on the grid is an [NP-Complete](https://en.wikipedia.org/wiki/NP-completeness) problem. Being NP-Complete, we can convert a tiling problem into an instance of a [Boolean Satisfiability Problem](https://en.wikipedia.org/wiki/Boolean_satisfiability_problem), for which efficient solvers exist.
+## Development
 
-Tiling problems can be converted to SAT by introducing a boolean variable for each configuration that each piece could possibly exist in, and then adding clauses that state that a piece must exist in exactly one configuration, and no configurations can overlap.
+- `npm run serve`: dev server with hot reload
+- `npm run build`: production build to `dist/`
 
-#### Javascript SAT Solver
+## Credits
 
-The problem is converted to a [CNF](https://en.wikipedia.org/wiki/Conjunctive_normal_form) file (a common input format for SAT solvers).
-After that, [boolean-sat](https://www.npmjs.com/package/boolean-sat) is applied to solve the problem.
-This is Javascript SAT solver based on my [forked repo](https://github.com/cemulate/SAT.js) of the original code written by Gregory Duck of at University of Singapore.
-This is probably the least efficient method.
-Since the SAT problem must be specified in CNF, even the input file can get very large very quickly.
-
-#### Z3 Webassembly
-
-This was born out of an attempt to make the preceding method faster.
-Here, we convert the problem to [SMT](http://smtlib.cs.uiowa.edu/) format, and use the [Webassembly build](https://github.com/cpitclaudel/z3.wasm) of Microsoft Research's [Z3 Theorem Prover](https://github.com/Z3Prover/z3).
-Generally speaking, this is a tool that can check the satisfiability of first-order logic statements over arbitrary theories, but we only utilize it for the predicate logic subset.
+- Based on [polyomino-solver](https://github.com/cemulate/polyomino-solver) by [cemulate](https://github.com/cemulate), including the polyomino editor originally from [web-component-polyomino](https://github.com/cemulate/web-component-polyomino).
+- [dlxlib](https://github.com/taylorjg/dlxlibjs) by taylorjg.
+- [Jump Space](https://jumpspacegame.com/) by Keepsake Games. This is an unofficial fan tool, not affiliated with the developers.
