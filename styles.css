@@ -2542,6 +2542,17 @@
         outline: 2px solid black;
     }
 
+    /* Plain grids (custom shape drawing) would be black on black in dark mode */
+    .dark .grid-container.svelte-1r4io2x:not(.grid-look) {
+        outline-color: #71717a;
+    }
+    .dark .grid-container.svelte-1r4io2x:not(.grid-look) .cell:where(.svelte-1r4io2x) {
+        outline-color: #71717a;
+    }
+    .dark .grid-container.svelte-1r4io2x:not(.grid-look) .cell.active.white:where(.svelte-1r4io2x) {
+        background-color: #e4e4e7;
+    }
+
     #region-create, #solution-display {
     background: lightgray;
 }
