@@ -1,5 +1,7 @@
 # Jump Space Reactor Solver
 
+🚀 **You can try it here: https://oussamaxx.github.io/jump-space-solver/**
+
 A web app that helps you plan your ship's power grid layout in [Jump Space](https://jumpspacegame.com/) ([Steam](https://store.steampowered.com/app/1757300/Jump_Space/)).
 
 Pick your ship components, then choose a reactor and two aux generators. The generators define the powered/protected cells, and the app finds a tiling that fits your components into them. If everything can't fit, it falls back to a partial solution. You can also draw custom pieces and regions by hand (if ever the project was no longer maintained).

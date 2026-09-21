@@ -221,7 +221,27 @@
         }
     }
 
+    // Problems found by the last Solve click (blocks solving until fixed)
+    let validationErrors = [];
+    let validationOpen = false;
+
+    function validateProblem() {
+        const errors = [];
+        // One reactor or aux generator is enough (a hand-drawn region also counts)
+        if (!regionCoords.length) {
+            errors.push('No reactor or aux generator selected: select at least one in the Power Grid section.');
+        }
+        if (!polyominos.length) errors.push('No components selected: add at least one component.');
+        return errors;
+    }
+
     function solve() {
+        validationErrors = validateProblem();
+        if (validationErrors.length) {
+            validationOpen = true;
+            return;
+        }
+
         // The solving machinery normalizes the region (shifts it to the origin).
         // Remember the shift so the solution can be mapped back onto the grid.
         const dx = regionCoords.length ? Math.min(...regionCoords.map(c => c[0])) : 0;
@@ -419,6 +439,20 @@
     </section>
 
 </main>
+
+<AlertDialog.Root bind:open={ validationOpen }>
+    <AlertDialog.Content>
+        <AlertDialog.Header>
+            <AlertDialog.Title>Can't solve yet</AlertDialog.Title>
+            <AlertDialog.Description>
+                {#each validationErrors as message}<div>{ message }</div>{/each}
+            </AlertDialog.Description>
+        </AlertDialog.Header>
+        <AlertDialog.Footer>
+            <AlertDialog.Action onclick={ () => validationOpen = false }>OK</AlertDialog.Action>
+        </AlertDialog.Footer>
+    </AlertDialog.Content>
+</AlertDialog.Root>
 
 <AlertDialog.Root bind:open={ resetConfirmOpen }>
     <AlertDialog.Content>

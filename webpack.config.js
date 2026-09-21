@@ -61,7 +61,7 @@ module.exports = (env, argv) => {
         { from: './wasm/z3w.wasm', to: './z3w.wasm' },
         { from: './wasm/z3w.js', to: './z3w.js' },
         { from: './index.html', to: './index.html' },
-        { from: './assets/favicon.png', to: './favicon.png' },
+        { from: './assets/favicon.webp', to: './favicon.webp' },
       ],
     }),
   ],
