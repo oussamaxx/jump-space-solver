@@ -163,7 +163,7 @@
         <span class="swatch" style="background: {tip.color}"></span>
         <div>
             <div class="tip-name">{ tip.name }</div>
-            <div class="tip-category">{ tip.category }</div>
+            <div class="tip-category">{ tip.category }{ tip.custom ? " · Custom" : "" }</div>
         </div>
     </div>
 {/if}

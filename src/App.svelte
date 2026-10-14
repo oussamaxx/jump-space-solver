@@ -13,7 +13,7 @@
 
     import PolyominoControl from '$lib/components/PolyominoControl.svelte';
 
-    import { Polyomino, componentsByCategory } from './js/Polyomino.js';
+    import { Polyomino, componentCategories, componentsByCategory } from './js/Polyomino.js';
     import { generatorSlots } from './js/generators.js';
     import SatSolverWorker from 'worker-loader!./js/SatSolverWorker.js';
 
@@ -123,6 +123,7 @@
             localStorage.setItem('polyomino-solver-state', JSON.stringify({
                 savedPolyomino: polyominos,
                 savedInfo: polyominoInfo,
+                customComponents,
                 size: regionCreateSize,
                 regionCoords,
                 generators: Object.fromEntries(Object.entries(selectedGenerators)
@@ -132,7 +133,7 @@
         }, 1500);
     }
 
-    $: polyominos, regionCreateSize, regionCoords, selectedGenerators, persistStateDebounced();
+    $: polyominos, regionCreateSize, regionCoords, selectedGenerators, customComponents, persistStateDebounced();
 
     // Technical state
     let currentProblem = { problemData: null, time: null, solutionCoords: null };
@@ -187,11 +188,69 @@
     }
 
     let polyCreateCoords = [];
-    function addCustomPolyomino() {
+    // User-drawn components, saved alongside the built-in catalogue: { name, category, coords }
+    let customComponents = localState.customComponents || [];
+    let customDialogOpen = false;
+    let customName = '';
+    let customCategory = Object.keys(componentCategories)[0];
+    let customError = '';
+    // Normalized shape being drawn, shown in the "new custom component" dialog
+    $: customPreview = polyCreateCoords.length ? new Polyomino(polyCreateCoords).normalize() : null;
+
+    // Built-in catalogue with the custom components appended to their category
+    $: catalogue = componentsByCategory.map(group => ({
+        ...group,
+        components: [
+            ...group.components,
+            ...customComponents
+                .map((c, customIndex) => ({ name: c.name, category: c.category, custom: true, customIndex, polyomino: new Polyomino(c.coords) }))
+                .filter(c => c.category == group.category),
+        ],
+    }));
+
+    // Search box on the Components tab: matches component names (or the category label), case-insensitive
+    let componentSearch = '';
+    $: searchTerm = componentSearch.trim().toLowerCase();
+    $: filteredCatalogue = !searchTerm ? catalogue : catalogue
+        .map(group => group.label.toLowerCase().includes(searchTerm) ? group : {
+            ...group,
+            components: group.components.filter(c => c.name.toLowerCase().includes(searchTerm)),
+        })
+        .filter(group => group.components.length);
+
+    function componentInfo(comp) {
+        const info = { name: comp.name, category: comp.category, color: componentCategories[comp.category]?.color };
+        if (comp.custom) info.custom = true;
+        return info;
+    }
+
+    function addComponent(comp) {
+        polyominos = [ ...polyominos, [ ...comp.polyomino.coords ] ];
+        polyominoInfo = [ ...polyominoInfo, componentInfo(comp) ];
+    }
+
+    function openCustomDialog() {
+        customName = '';
+        customError = '';
+        customDialogOpen = true;
+    }
+
+    function saveCustomComponent() {
+        const name = customName.trim();
+        if (!polyCreateCoords.length) return customError = 'Draw a shape first.';
+        if (!name) return customError = 'Enter a name.';
         // Normalize the coordinates first
-        let p = new Polyomino(polyCreateCoords).normalize();
-        polyominos = [ ...polyominos, p.coords ];
-        polyominoInfo = [ ...polyominoInfo, null ];
+        const coords = new Polyomino(polyCreateCoords).normalize().coords;
+        const comp = { name, category: customCategory, coords };
+        customComponents = [ ...customComponents, comp ];
+        addComponent({ ...comp, custom: true, polyomino: new Polyomino(coords) });
+        customDialogOpen = false;
+        polyCreateCoords = [];
+        selectedTab = 'components';
+    }
+
+    function removeCustomComponent(comp) {
+        customComponents = customComponents.toSpliced(comp.customIndex, 1);
     }
 
     function handleWorkerMessage(event) {
@@ -356,11 +415,25 @@
                 <Button variant="outline" class="size-button" title="grid size down" onclick={() => polyCreateSize = Math.max(2, polyCreateSize - 1) }>⇲</Button>
                 <Button variant="outline" class="size-button" title="grid size up" onclick={() => polyCreateSize += 1}>⇱</Button>
                 <Button variant="outline" class="size-button" title="clear" onclick={() => polyCreateCoords = [] }>⎚</Button>
-                <Button class="flex-1" onclick={ addCustomPolyomino }>Add</Button>
+                <Button class="flex-1" disabled={ !polyCreateCoords.length } onclick={ openCustomDialog }>Add…</Button>
             </div>
         </div>
-        <div class="mt-4 max-h-[70vh] overflow-y-auto pr-1" class:hidden={ selectedTab != 'components' }>
-            {#each componentsByCategory as group}
+        <div class="relative mt-4" class:hidden={ selectedTab != 'components' }>
+            <input type="text" placeholder="Search components…" aria-label="Search components"
+                   class="h-8 w-full border bg-transparent px-2 pr-8 text-sm"
+                   bind:value={ componentSearch }
+                   onkeydown={ e => e.key == 'Escape' && (componentSearch = '') } />
+            {#if componentSearch}
+                <button type="button" title="Clear search"
+                        class="absolute right-0 top-0 flex h-8 w-8 cursor-pointer items-center justify-center text-muted-foreground hover:text-foreground"
+                        onclick={ () => componentSearch = '' }>✕</button>
+            {/if}
+        </div>
+        <div class="mt-3 max-h-[70vh] overflow-y-auto pr-1" class:hidden={ selectedTab != 'components' }>
+            {#if !filteredCatalogue.length}
+                <p class="px-2 py-4 text-sm text-muted-foreground">No components match “{ componentSearch.trim() }”.</p>
+            {/if}
+            {#each filteredCatalogue as group}
                 <div class="mb-5">
                     <div class="mb-1 flex items-center gap-2 px-2">
                         <span class="size-2.5 rounded-full" style="background: {group.color}"></span>
@@ -370,17 +443,19 @@
                     <Separator />
                     <ul class="divide-y">
                         {#each group.components as comp}
-                            <li>
+                            <li class="group/item relative">
                                 <button
                                     type="button"
                                     class="flex h-[72px] w-full cursor-pointer items-center gap-3 px-2 text-left text-sm transition-colors hover:bg-accent"
                                     title="Add { comp.name }"
-                                    onclick={ () => {
-                                        polyominos = [ ...polyominos, [ ...comp.polyomino.coords ] ];
-                                        polyominoInfo = [ ...polyominoInfo, { name: comp.name, category: comp.category, color: group.color } ];
-                                    } }
+                                    onclick={ () => addComponent(comp) }
                                 >
-                                    <span class="flex-1">{ comp.name }</span>
+                                    <span class="flex flex-1 items-center gap-2">
+                                        { comp.name }
+                                        {#if comp.custom}
+                                            <span class="border px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">Custom</span>
+                                        {/if}
+                                    </span>
                                     <span class="flex h-full w-[100px] flex-none items-center justify-end">
                                     <span
                                         class="relative flex-none overflow-hidden"
@@ -392,11 +467,21 @@
                                             class="pointer-events-none absolute bottom-0 left-0"
                                             style="width: { comp.polyomino.getSize() * 20 }px; height: { comp.polyomino.getSize() * 20 }px"
                                             value={ comp.polyomino.coords }
-                                            info={{ name: comp.name, category: comp.category, color: group.color }}
+                                            info={ componentInfo(comp) }
                                         />
                                     </span>
                                     </span>
+                                    {#if comp.custom}<span class="w-6 flex-none"></span>{/if}
                                 </button>
+                                {#if comp.custom}
+                                    <button
+                                        type="button"
+                                        class="absolute top-1/2 right-1 -translate-y-1/2 cursor-pointer px-1.5 text-muted-foreground hover:text-destructive"
+                                        title="Delete { comp.name }"
+                                        aria-label="Delete { comp.name }"
+                                        onclick={ () => removeCustomComponent(comp) }
+                                    >✕</button>
+                                {/if}
                             </li>
                         {/each}
                     </ul>
@@ -492,6 +577,53 @@
                 {/if}
             {/if}
         </div>
+    </Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root bind:open={ customDialogOpen }>
+    <Dialog.Content class="sm:max-w-sm">
+        <Dialog.Header>
+            <Dialog.Title>New custom component</Dialog.Title>
+        </Dialog.Header>
+        <form class="flex flex-col gap-4" onsubmit={ e => { e.preventDefault(); saveCustomComponent(); } }>
+            {#if customPreview}
+                <div class="flex justify-center border p-3">
+                    <span
+                        class="relative flex-none overflow-hidden"
+                        style="width: { customPreview.getWidth() * 24 }px; height: { customPreview.getHeight() * 24 }px"
+                    >
+                        <PolyominoControl
+                            size={ customPreview.getSize() }
+                            mode="display"
+                            class="pointer-events-none absolute bottom-0 left-0"
+                            style="width: { customPreview.getSize() * 24 }px; height: { customPreview.getSize() * 24 }px"
+                            value={ customPreview.coords }
+                            info={ componentInfo({ name: customName.trim() || 'New component', category: customCategory, custom: true }) }
+                        />
+                    </span>
+                </div>
+            {/if}
+            <div class="flex flex-col gap-2">
+                <Label for="custom-name">Name</Label>
+                <!-- svelte-ignore a11y_autofocus -->
+                <input id="custom-name" type="text" autofocus maxlength="60"
+                       class="h-8 border bg-transparent px-2 text-sm"
+                       bind:value={ customName } />
+            </div>
+            <div class="flex flex-col gap-2">
+                <Label for="custom-category">Category</Label>
+                <select id="custom-category" class="h-8 border bg-background px-2 text-sm" bind:value={ customCategory }>
+                    {#each Object.entries(componentCategories) as [ id, category ]}
+                        <option value={ id }>{ category.label }</option>
+                    {/each}
+                </select>
+            </div>
+            {#if customError}<p class="text-sm text-destructive">{ customError }</p>{/if}
+            <div class="flex justify-end gap-2">
+                <Button type="button" variant="outline" onclick={ () => customDialogOpen = false }>Cancel</Button>
+                <Button type="submit">Save</Button>
+            </div>
+        </form>
     </Dialog.Content>
 </Dialog.Root>
 
