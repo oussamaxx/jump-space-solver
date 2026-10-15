@@ -121,7 +121,6 @@ export const components = [
     component('Vector Targeting Module', 'Sensor', fromGrid([[1, 1, 1], [1, 0, 0]])),
 
     component('Fragment Cannon', 'Pilot Canon', fromGrid([[1, 1, 1]])),
-    component('Rapid Pulse Cannon', 'Pilot Canon', fromGrid([[1, 1, 1], [1, 1, 1]])),
     component('Reaver Rotary Cannon', 'Pilot Canon', fromGrid([[1, 1, 1], [1, 1, 1]])),
     component('Disruptor Laser', 'Pilot Canon', fromGrid([[1, 1, 1], [0, 1, 0], [0, 1, 0]])),
     component('Bolt Accelerator', 'Pilot Canon', fromGrid([[1, 1, 1], [1, 0, 1]])),
