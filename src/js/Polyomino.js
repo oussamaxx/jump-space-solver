@@ -131,6 +131,7 @@ export const components = [
     component('Flak Launcher Turrets', 'Multi Turret System', fromGrid([[1, 1, 1, 1], [1, 0, 0, 1]])),
 
     component('Thunderburst Heavy Cannon', 'Special Weapon', fromGrid([[1, 1, 1, 1], [1, 0, 0, 0]])),
+    component('Vulcan Rotary Cannon', 'Special Weapon', fromGrid([[1, 1, 1, 1]])),
     component('Lance Railgun', 'Special Weapon', fromGrid([[1, 1, 1], [1, 0, 1], [1, 0, 1]])),
     component('Missile Launcher', 'Special Weapon', fromGrid([[1, 1, 1], [1, 1, 1], [1, 1, 1]])),
     component('Burst Shield', 'Special Weapon', fromGrid([[1, 1], [1, 1]])),
