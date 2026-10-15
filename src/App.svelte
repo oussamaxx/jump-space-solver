@@ -12,6 +12,7 @@
     import * as AlertDialog from '$lib/components/ui/alert-dialog';
 
     import PolyominoControl from '$lib/components/PolyominoControl.svelte';
+    import LayoutPreview from '$lib/components/LayoutPreview.svelte';
 
     import { Polyomino, componentCategories, componentsByCategory } from './js/Polyomino.js';
     import { generatorSlots } from './js/generators.js';
@@ -82,10 +83,12 @@
             pickerOpen = true;
         });
     }
+    // Keep the same capacity when switching generator, or the highest one it has below it
+    function variantForGenerator(generator, current) {
+        return generator.variants.findLast(v => v.capacity <= (current?.variant.capacity ?? 0)) || generator.variants[0];
+    }
     function pickGenerator(generator) {
-        const current = selectedGenerators[pickerSlot.id];
-        // Keep the same capacity when switching generator, or the highest one it has below it
-        const variant = generator.variants.findLast(v => v.capacity <= (current?.variant.capacity ?? 0)) || generator.variants[0];
+        const variant = variantForGenerator(generator, selectedGenerators[pickerSlot.id]);
         selectedGenerators[pickerSlot.id] = { generator, variant };
         applyGenerators();
     }
@@ -567,18 +570,26 @@
         <div class="flex flex-col gap-2">
             {#if pickerSlot}
                 {#each pickerSlot.options as option (option.id)}
-                    <Button variant={ selectedGenerators[pickerSlot.id]?.generator.id == option.id ? 'default' : 'outline' }
-                            onclick={() => pickGenerator(option) }>{ option.name }</Button>
+                    <Button class="h-auto justify-between gap-3 py-2"
+                            variant={ selectedGenerators[pickerSlot.id]?.generator.id == option.id ? 'default' : 'outline' }
+                            onclick={() => pickGenerator(option) }>
+                        <span>{ option.name }</span>
+                        <LayoutPreview layout={ variantForGenerator(option, selectedGenerators[pickerSlot.id]).layout }
+                                       colors={ cellTypeColors } cell={ 7 } />
+                    </Button>
                 {/each}
                 {#if selectedGenerators[pickerSlot.id]}
                     <Separator />
                     <p class="text-sm font-semibold">Reactor capacity</p>
                     <div class="flex gap-2">
                         {#each selectedGenerators[pickerSlot.id].generator.variants as variant (variant.id)}
-                            <Button class="flex-1"
+                            <Button class="h-auto flex-1 flex-col gap-1 px-1 py-2"
                                     variant={ selectedGenerators[pickerSlot.id].variant.id == variant.id ? 'default' : 'outline' }
                                     title={ variant.rare ? 'Rare only' : null }
-                                    onclick={() => pickVariant(variant) }>{ variant.capacity }{ variant.rare ? ' ★' : '' }</Button>
+                                    onclick={() => pickVariant(variant) }>
+                                <span>{ variant.capacity }{ variant.rare ? ' ★' : '' }</span>
+                                <LayoutPreview layout={ variant.layout } colors={ cellTypeColors } cell={ 4 } />
+                            </Button>
                         {/each}
                     </div>
                     {#if selectedGenerators[pickerSlot.id].generator.variants.some(v => v.rare)}
