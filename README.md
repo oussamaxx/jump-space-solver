@@ -34,3 +34,4 @@ Two older, much slower backends are still in the code:
 - Based on [polyomino-solver](https://github.com/cemulate/polyomino-solver) by [cemulate](https://github.com/cemulate), including the polyomino editor originally from [web-component-polyomino](https://github.com/cemulate/web-component-polyomino).
 - [dlxlib](https://github.com/taylorjg/dlxlibjs) by taylorjg.
 - [Jump Space](https://jumpspacegame.com/) by Keepsake Games. This is an unofficial fan tool, not affiliated with the developers.
+- Big thank you to [@Hauk54](https://www.youtube.com/@hauk54) for providing updated components/reactors/generators 🫶 (make sure you subscribe to his channel).
