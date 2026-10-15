@@ -222,6 +222,15 @@ export const auxGenerators = [
                     [0, 1, 0, 0, 0, 0, 1, 0],
                 ],
             },
+            {
+                id: 'capacity-3',
+                capacity: 3,
+                rare: true,
+                layout: [
+                    [1, 2, 1, 2, 2, 1, 2, 1],
+                    [0, 1, 0, 1, 1, 0, 1, 0],
+                ],
+            },
         ],
     },
     {
@@ -252,6 +261,15 @@ export const auxGenerators = [
                     [0, 1, 2, 2, 2, 2, 1, 0],
                 ],
             },
+            {
+                id: 'capacity-3',
+                capacity: 3,
+                rare: true,
+                layout: [
+                    [0, 2, 2, 0, 0, 2, 2, 0],
+                    [0, 2, 2, 1, 1, 2, 2, 0],
+                ],
+            },
         ],
     },
     {
@@ -280,6 +298,15 @@ export const auxGenerators = [
                 layout: [
                     [0, 1, 0, 0, 0, 0, 1, 0],
                     [1, 1, 1, 1, 1, 1, 1, 1],
+                ],
+            },
+            {
+                id: 'capacity-3',
+                capacity: 3,
+                rare: true,
+                layout: [
+                    [0, 1, 0, 1, 1, 0, 1, 0],
+                    [1, 2, 1, 2, 2, 1, 2, 1],
                 ],
             },
         ],
