@@ -104,9 +104,11 @@ const fromCells = (cells) => {
 
 export const componentCategories = {
     'Sensor': { label: 'Sensor', color: '#38bdf8' },
-    'Pilot Canon': { label: 'Pilot Canon', color: '#f97316' },
+    // Key kept as 'Pilot Canon' since custom components are saved with their category key
+    'Pilot Canon': { label: 'Pilot Cannon', color: '#f97316' },
     'Multi Turret System': { label: 'Multi Turret System', color: '#ef4444' },
     'Special Weapon': { label: 'Special Weapon', color: '#a855f7' },
+    'Shield Generator': { label: 'Shield Generator', color: '#14b8a6' },
     'Engine': { label: 'Engine', color: '#eab308' },
     'Jump Drive': { label: 'Jump Drive', color: '#22c55e' },
 };
@@ -118,23 +120,26 @@ export const components = [
     component('Supply Uplink Unit', 'Sensor', fromCells([{r:0,c:1},{r:0,c:2},{r:1,c:0},{r:1,c:1}])),
     component('Vector Targeting Module', 'Sensor', fromGrid([[1, 1, 1], [1, 0, 0]])),
 
-    component('Fragment Cannon MK I', 'Pilot Canon', fromGrid([[1, 1, 1]])),
-    component('Fragment Cannon MK II/III', 'Pilot Canon', fromCells([{r:0,c:0},{r:0,c:1},{r:0,c:2},{r:1,c:1}])),
+    component('Fragment Cannon', 'Pilot Canon', fromGrid([[1, 1, 1]])),
     component('Rapid Pulse Cannon', 'Pilot Canon', fromGrid([[1, 1, 1], [1, 1, 1]])),
-    component('Disruptor Lasers MK I/II', 'Pilot Canon', fromCells([{r:0,c:0},{r:0,c:1},{r:1,c:0}])),
-    component('Disruptor Lasers MK III', 'Pilot Canon', fromGrid([[1, 1]])),
-    component('Bolt Accelerator', 'Pilot Canon', fromCells([{r:0,c:1},{r:0,c:0},{r:0,c:2},{r:1,c:0},{r:1,c:2}])),
+    component('Reaver Rotary Cannon', 'Pilot Canon', fromGrid([[1, 1, 1], [1, 1, 1]])),
+    component('Disruptor Laser', 'Pilot Canon', fromGrid([[1, 1, 1], [0, 1, 0], [0, 1, 0]])),
+    component('Bolt Accelerator', 'Pilot Canon', fromGrid([[1, 1, 1], [1, 0, 1]])),
 
     component('Assault Turrets', 'Multi Turret System', fromGrid([[1, 1, 1], [1, 0, 0]])),
-    component('Gatling Turrets', 'Multi Turret System', fromCells([{r:0,c:0},{r:0,c:1},{r:0,c:2},{r:1,c:0},{r:1,c:1},{r:1,c:2},{r:2,c:0}])),
-    component('Mining Lasers MK I/II', 'Multi Turret System', fromCells([{r:0,c:0},{r:0,c:1},{r:1,c:0}])),
-    component('Mining Lasers MK III', 'Multi Turret System', fromGrid([[1, 1]])),
+    component('Gatling Turrets', 'Multi Turret System', fromGrid([[1, 1, 1], [1, 1, 1], [1, 0, 0]])),
+    component('Mining Lasers', 'Multi Turret System', fromGrid([[1, 0, 0], [1, 1, 1], [0, 0, 1]])),
     component('Flak Launcher Turrets', 'Multi Turret System', fromGrid([[1, 1, 1, 1], [1, 0, 0, 1]])),
 
+    component('Thunderburst Heavy Cannon', 'Special Weapon', fromGrid([[1, 1, 1, 1], [1, 0, 0, 0]])),
     component('Lance Railgun', 'Special Weapon', fromGrid([[1, 1, 1], [1, 0, 1], [1, 0, 1]])),
     component('Missile Launcher', 'Special Weapon', fromGrid([[1, 1, 1], [1, 1, 1], [1, 1, 1]])),
     component('Burst Shield', 'Special Weapon', fromGrid([[1, 1], [1, 1]])),
     component('Targeting Module', 'Special Weapon', fromGrid([[1, 1]])),
+
+    component('Skirmisher Shield', 'Shield Generator', fromGrid([[1, 1]])),
+    component('Fighter Shield', 'Shield Generator', fromGrid([[1, 1, 1], [1, 0, 0]])),
+    component('Fortress Shield', 'Shield Generator', fromGrid([[1, 1, 1], [1, 1, 1], [1, 1, 0]])),
 
     component('Drift Phase Engine', 'Engine', fromGrid([[1, 1, 1]])),
     component('Mass Ejector Engine', 'Engine', fromGrid([[1, 1, 1]])),

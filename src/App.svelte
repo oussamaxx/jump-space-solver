@@ -35,12 +35,15 @@
         maxSolutions: 3,
     }
     let settingsOpen = false;
+    // Variant ids saved before the reactor capacity update (MK I–III)
+    const legacyVariantIds = { 'mk-i': 'capacity-0', 'mk-ii': 'capacity-1', 'mk-iii': 'capacity-2' };
     // selectedGenerators[slot.id] = { generator, variant } (objects from generators.js)
     function restoreGenerators(saved = {}) {
         const result = { reactor: null, aux1: null, aux2: null };
         for (const slot of generatorSlots) {
             const generator = slot.options.find(g => g.id == saved[slot.id]?.generator);
-            const variant = generator?.variants.find(v => v.id == saved[slot.id]?.variant);
+            const variantId = legacyVariantIds[saved[slot.id]?.variant] || saved[slot.id]?.variant;
+            const variant = generator?.variants.find(v => v.id == variantId);
             if (variant) result[slot.id] = { generator, variant };
         }
         return result;
@@ -81,8 +84,8 @@
     }
     function pickGenerator(generator) {
         const current = selectedGenerators[pickerSlot.id];
-        // Keep the same MK when switching generator, if it exists
-        const variant = generator.variants.find(v => v.id == current?.variant.id) || generator.variants[0];
+        // Keep the same capacity when switching generator, or the highest one it has below it
+        const variant = generator.variants.findLast(v => v.capacity <= (current?.variant.capacity ?? 0)) || generator.variants[0];
         selectedGenerators[pickerSlot.id] = { generator, variant };
         applyGenerators();
     }
@@ -92,7 +95,9 @@
         pickerOpen = false;
     }
     function describeSelection(selection) {
-        return selection ? `${ selection.generator.name } ${ selection.variant.label }` : null;
+        if (!selection) return null;
+        const { generator, variant } = selection;
+        return `${ generator.name } · Capacity ${ variant.capacity }${ variant.rare ? ' (Rare)' : '' }`;
     }
     let polyCreateSize = 7;
     let regionCreateSize = localState.size || 8;
@@ -567,13 +572,18 @@
                 {/each}
                 {#if selectedGenerators[pickerSlot.id]}
                     <Separator />
+                    <p class="text-sm font-semibold">Reactor capacity</p>
                     <div class="flex gap-2">
                         {#each selectedGenerators[pickerSlot.id].generator.variants as variant (variant.id)}
                             <Button class="flex-1"
                                     variant={ selectedGenerators[pickerSlot.id].variant.id == variant.id ? 'default' : 'outline' }
-                                    onclick={() => pickVariant(variant) }>{ variant.label }</Button>
+                                    title={ variant.rare ? 'Rare only' : null }
+                                    onclick={() => pickVariant(variant) }>{ variant.capacity }{ variant.rare ? ' ★' : '' }</Button>
                         {/each}
                     </div>
+                    {#if selectedGenerators[pickerSlot.id].generator.variants.some(v => v.rare)}
+                        <p class="text-xs text-muted-foreground">★ Capacity 3 is only available on rares.</p>
+                    {/if}
                 {/if}
             {/if}
         </div>

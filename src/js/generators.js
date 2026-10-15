@@ -1,38 +1,51 @@
 // Layout cells: 0 = empty, 1 = powered, 2 = protected.
 // Rows are listed top to bottom; a reactor spans 4 rows, an aux generator 2.
+// Each variant is one "reactor capacity" upgrade level. Standard parts go up to 2;
+// capacity 3 only exists on rares ("Superior" in game).
 export const reactors = [
     {
         id: 'split-reactor',
         name: 'Split Reactor',
         variants: [
             {
-                id: 'mk-i',
-                label: 'MK I',
+                id: 'capacity-0',
+                capacity: 0,
                 layout: [
+                    [1, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 1],
                     [1, 1, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 1, 0, 0, 1, 1, 1],
+                    [1, 1, 0, 0, 0, 0, 1, 1],
+                ],
+            },
+            {
+                id: 'capacity-1',
+                capacity: 1,
+                layout: [
+                    [1, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 1, 0, 0, 0, 0, 1, 1],
+                    [1, 1, 0, 0, 0, 0, 1, 1],
+                    [1, 1, 0, 0, 0, 0, 1, 1],
+                ],
+            },
+            {
+                id: 'capacity-2',
+                capacity: 2,
+                layout: [
+                    [1, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 1, 0, 0, 0, 0, 1, 1],
                     [1, 1, 1, 0, 0, 1, 1, 1],
                     [1, 1, 1, 0, 0, 1, 1, 1],
                 ],
             },
             {
-                id: 'mk-ii',
-                label: 'MK II',
+                id: 'capacity-3',
+                capacity: 3,
+                rare: true,
                 layout: [
-                    [1, 1, 0, 0, 0, 0, 1, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 1],
                     [1, 1, 1, 0, 0, 1, 1, 1],
-                    [2, 1, 1, 0, 0, 1, 1, 2],
-                    [2, 1, 1, 0, 0, 1, 1, 2],
-                ],
-            },
-            {
-                id: 'mk-iii',
-                label: 'MK III',
-                layout: [
-                    [1, 1, 0, 0, 0, 0, 1, 1],
                     [1, 1, 1, 0, 0, 1, 1, 1],
-                    [2, 2, 1, 0, 0, 1, 2, 2],
-                    [2, 2, 1, 0, 0, 1, 2, 2],
+                    [1, 1, 1, 1, 1, 1, 1, 1],
                 ],
             },
         ],
@@ -42,33 +55,44 @@ export const reactors = [
         name: 'Solid State Reactor',
         variants: [
             {
-                id: 'mk-i',
-                label: 'MK I',
+                id: 'capacity-0',
+                capacity: 0,
                 layout: [
-                    [0, 0, 1, 1, 1, 1, 0, 0],
+                    [0, 0, 0, 1, 1, 0, 0, 0],
                     [0, 0, 1, 1, 1, 1, 0, 0],
                     [0, 0, 2, 2, 2, 2, 0, 0],
                     [0, 0, 2, 2, 2, 2, 0, 0],
                 ],
             },
             {
-                id: 'mk-ii',
-                label: 'MK II',
+                id: 'capacity-1',
+                capacity: 1,
                 layout: [
-                    [0, 0, 1, 1, 1, 1, 0, 0],
-                    [0, 0, 2, 2, 2, 2, 0, 0],
-                    [0, 0, 2, 2, 2, 2, 0, 0],
-                    [0, 0, 2, 2, 2, 2, 0, 0],
+                    [0, 0, 0, 1, 1, 0, 0, 0],
+                    [0, 0, 1, 2, 2, 1, 0, 0],
+                    [0, 1, 2, 2, 2, 2, 1, 0],
+                    [0, 1, 2, 2, 2, 2, 1, 0],
                 ],
             },
             {
-                id: 'mk-iii',
-                label: 'MK III',
+                id: 'capacity-2',
+                capacity: 2,
+                layout: [
+                    [0, 0, 0, 2, 2, 0, 0, 0],
+                    [0, 0, 1, 2, 2, 1, 0, 0],
+                    [0, 2, 2, 2, 2, 2, 2, 0],
+                    [0, 2, 2, 2, 2, 2, 2, 0],
+                ],
+            },
+            {
+                id: 'capacity-3',
+                capacity: 3,
+                rare: true,
                 layout: [
                     [0, 0, 2, 2, 2, 2, 0, 0],
                     [0, 0, 2, 2, 2, 2, 0, 0],
-                    [0, 0, 2, 2, 2, 2, 0, 0],
-                    [0, 0, 2, 2, 2, 2, 0, 0],
+                    [0, 2, 2, 2, 2, 2, 2, 0],
+                    [0, 2, 2, 2, 2, 2, 2, 0],
                 ],
             },
         ],
@@ -78,33 +102,44 @@ export const reactors = [
         name: 'Materia Scatter Reactor',
         variants: [
             {
-                id: 'mk-i',
-                label: 'MK I',
+                id: 'capacity-0',
+                capacity: 0,
                 layout: [
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [0, 1, 0, 1, 1, 0, 1, 0],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [2, 0, 2, 0, 0, 2, 0, 2],
+                    [1, 1, 1, 0, 0, 1, 1, 1],
+                    [0, 1, 1, 0, 0, 1, 1, 0],
+                    [0, 0, 1, 1, 1, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
                 ],
             },
             {
-                id: 'mk-ii',
-                label: 'MK II',
+                id: 'capacity-1',
+                capacity: 1,
                 layout: [
                     [1, 1, 1, 1, 1, 1, 1, 1],
-                    [0, 1, 0, 1, 1, 0, 1, 0],
-                    [1, 2, 2, 1, 1, 2, 2, 1],
-                    [2, 0, 2, 0, 0, 2, 0, 2],
+                    [0, 1, 1, 0, 0, 1, 1, 0],
+                    [0, 0, 1, 1, 1, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
                 ],
             },
             {
-                id: 'mk-iii',
-                label: 'MK III',
+                id: 'capacity-2',
+                capacity: 2,
                 layout: [
                     [1, 1, 1, 1, 1, 1, 1, 1],
-                    [0, 2, 0, 1, 1, 0, 2, 0],
-                    [2, 2, 2, 2, 2, 2, 2, 2],
-                    [2, 0, 2, 0, 0, 2, 0, 2],
+                    [1, 1, 1, 0, 0, 1, 1, 1],
+                    [0, 0, 1, 1, 1, 1, 0, 0],
+                    [0, 0, 0, 1, 1, 0, 0, 0],
+                ],
+            },
+            {
+                id: 'capacity-3',
+                capacity: 3,
+                rare: true,
+                layout: [
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 0, 0, 1, 1, 1],
+                    [1, 0, 1, 1, 1, 1, 0, 1],
+                    [0, 0, 0, 1, 1, 0, 0, 0],
                 ],
             },
         ],
@@ -114,33 +149,44 @@ export const reactors = [
         name: 'Null Wave Reactor',
         variants: [
             {
-                id: 'mk-i',
-                label: 'MK I',
+                id: 'capacity-0',
+                capacity: 0,
                 layout: [
-                    [1, 1, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 1, 0, 0, 1, 1, 1],
+                    [0, 1, 0, 0, 0, 0, 1, 0],
+                    [0, 1, 1, 0, 0, 1, 1, 0],
                     [0, 2, 2, 1, 1, 2, 2, 0],
                     [0, 0, 2, 1, 1, 2, 0, 0],
                 ],
             },
             {
-                id: 'mk-ii',
-                label: 'MK II',
+                id: 'capacity-1',
+                capacity: 1,
                 layout: [
-                    [2, 1, 0, 0, 0, 0, 1, 2],
-                    [2, 1, 1, 0, 0, 1, 1, 2],
+                    [0, 1, 0, 0, 0, 0, 1, 0],
+                    [0, 1, 1, 1, 1, 1, 1, 0],
                     [0, 2, 2, 1, 1, 2, 2, 0],
-                    [0, 0, 2, 1, 1, 2, 0, 0],
+                    [0, 0, 2, 2, 2, 2, 0, 0],
                 ],
             },
             {
-                id: 'mk-iii',
-                label: 'MK III',
+                id: 'capacity-2',
+                capacity: 2,
                 layout: [
-                    [2, 2, 0, 0, 0, 0, 2, 2],
-                    [2, 2, 1, 0, 0, 1, 2, 2],
-                    [0, 2, 2, 1, 1, 2, 2, 0],
-                    [0, 0, 2, 1, 1, 2, 0, 0],
+                    [0, 1, 0, 0, 0, 0, 1, 0],
+                    [0, 1, 1, 1, 1, 1, 1, 0],
+                    [1, 2, 2, 1, 1, 2, 2, 1],
+                    [0, 1, 2, 2, 2, 2, 1, 0],
+                ],
+            },
+            {
+                id: 'capacity-3',
+                capacity: 3,
+                rare: true,
+                layout: [
+                    [0, 1, 0, 0, 0, 0, 1, 0],
+                    [1, 2, 1, 1, 1, 1, 2, 1],
+                    [1, 2, 2, 1, 1, 2, 2, 1],
+                    [0, 2, 2, 2, 2, 2, 2, 0],
                 ],
             },
         ],
@@ -153,27 +199,27 @@ export const auxGenerators = [
         name: 'Bio Fission Generator',
         variants: [
             {
-                id: 'mk-i',
-                label: 'MK I',
+                id: 'capacity-0',
+                capacity: 0,
+                layout: [
+                    [0, 1, 1, 0, 0, 1, 1, 0],
+                    [0, 1, 0, 0, 0, 0, 1, 0],
+                ],
+            },
+            {
+                id: 'capacity-1',
+                capacity: 1,
                 layout: [
                     [0, 1, 1, 1, 1, 1, 1, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 1, 0, 0, 0, 0, 1, 0],
                 ],
             },
             {
-                id: 'mk-ii',
-                label: 'MK II',
+                id: 'capacity-2',
+                capacity: 2,
                 layout: [
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [0, 0, 0, 0, 0, 0, 0, 0],
-                ],
-            },
-            {
-                id: 'mk-iii',
-                label: 'MK III',
-                layout: [
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 1, 1, 2, 2, 1, 1, 1],
+                    [0, 1, 0, 0, 0, 0, 1, 0],
                 ],
             },
         ],
@@ -183,27 +229,27 @@ export const auxGenerators = [
         name: 'Null Tension Generator',
         variants: [
             {
-                id: 'mk-i',
-                label: 'MK I',
+                id: 'capacity-0',
+                capacity: 0,
                 layout: [
-                    [0, 0, 1, 1, 1, 1, 0, 0],
+                    [0, 0, 1, 0, 0, 1, 0, 0],
                     [0, 0, 1, 1, 1, 1, 0, 0],
                 ],
             },
             {
-                id: 'mk-ii',
-                label: 'MK II',
+                id: 'capacity-1',
+                capacity: 1,
                 layout: [
-                    [0, 0, 1, 1, 1, 1, 0, 0],
+                    [0, 1, 1, 0, 0, 1, 1, 0],
                     [0, 0, 2, 1, 1, 2, 0, 0],
                 ],
             },
             {
-                id: 'mk-iii',
-                label: 'MK III',
+                id: 'capacity-2',
+                capacity: 2,
                 layout: [
-                    [0, 0, 1, 1, 1, 1, 0, 0],
-                    [0, 0, 2, 2, 2, 2, 0, 0],
+                    [0, 1, 2, 0, 0, 1, 1, 0],
+                    [0, 1, 2, 2, 2, 2, 1, 0],
                 ],
             },
         ],
@@ -213,27 +259,27 @@ export const auxGenerators = [
         name: 'Materia Shift Generator',
         variants: [
             {
-                id: 'mk-i',
-                label: 'MK I',
+                id: 'capacity-0',
+                capacity: 0,
                 layout: [
-                    [0, 1, 1, 0, 0, 1, 1, 0],
-                    [0, 1, 1, 0, 0, 1, 1, 0],
+                    [0, 1, 0, 0, 0, 0, 1, 0],
+                    [0, 1, 0, 1, 1, 0, 1, 0],
                 ],
             },
             {
-                id: 'mk-ii',
-                label: 'MK II',
+                id: 'capacity-1',
+                capacity: 1,
                 layout: [
-                    [0, 1, 2, 0, 0, 2, 1, 0],
-                    [0, 2, 1, 0, 0, 1, 2, 0],
+                    [0, 1, 0, 0, 0, 0, 1, 0],
+                    [0, 1, 1, 1, 1, 1, 1, 0],
                 ],
             },
             {
-                id: 'mk-iii',
-                label: 'MK III',
+                id: 'capacity-2',
+                capacity: 2,
                 layout: [
-                    [0, 1, 2, 0, 0, 2, 1, 0],
-                    [0, 2, 2, 0, 0, 2, 2, 0],
+                    [0, 1, 0, 0, 0, 0, 1, 0],
+                    [1, 1, 1, 1, 1, 1, 1, 1],
                 ],
             },
         ],
