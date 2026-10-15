@@ -235,6 +235,9 @@
   .inset-0 {
     inset: 0px;
   }
+  .top-0 {
+    top: 0px;
+  }
   .top-1\/2 {
     top: calc(1 / 2 * 100%);
   }
@@ -243,6 +246,12 @@
   }
   .top-5 {
     top: calc(var(--spacing) * 5);
+  }
+  .right-0 {
+    right: 0px;
+  }
+  .right-1 {
+    right: var(--spacing);
   }
   .right-3 {
     right: calc(var(--spacing) * 3);
@@ -301,6 +310,9 @@
   .mt-2 {
     margin-top: calc(var(--spacing) * 2);
   }
+  .mt-3 {
+    margin-top: calc(var(--spacing) * 3);
+  }
   .mt-4 {
     margin-top: calc(var(--spacing) * 4);
   }
@@ -351,6 +363,9 @@
   }
   .inline-flex {
     display: inline-flex;
+  }
+  .inline-grid {
+    display: inline-grid;
   }
   .table {
     display: table;
@@ -417,6 +432,9 @@
   .h-\[calc\(100\%_-_1px\)\] {
     height: calc(100% - 1px);
   }
+  .h-auto {
+    height: auto;
+  }
   .h-full {
     height: 100%;
   }
@@ -434,6 +452,9 @@
   }
   .w-2 {
     width: calc(var(--spacing) * 2);
+  }
+  .w-6 {
+    width: calc(var(--spacing) * 6);
   }
   .w-8 {
     width: calc(var(--spacing) * 8);
@@ -569,6 +590,9 @@
   .gap-10 {
     gap: calc(var(--spacing) * 10);
   }
+  .gap-px {
+    gap: 1px;
+  }
   :where(.space-y-4 > :not(:last-child)) {
     --tw-space-y-reverse: 0;
     margin-block-start: calc(calc(var(--spacing) * 4) * var(--tw-space-y-reverse));
@@ -702,6 +726,12 @@
   .bg-muted {
     background-color: var(--muted);
   }
+  .bg-muted-foreground\/20 {
+    background-color: var(--muted-foreground);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--muted-foreground) 20%, transparent);
+    }
+  }
   .bg-popover {
     background-color: var(--popover);
   }
@@ -744,6 +774,12 @@
   .p-6 {
     padding: calc(var(--spacing) * 6);
   }
+  .px-1 {
+    padding-inline: var(--spacing);
+  }
+  .px-1\.5 {
+    padding-inline: calc(var(--spacing) * 1.5);
+  }
   .px-2 {
     padding-inline: calc(var(--spacing) * 2);
   }
@@ -759,6 +795,9 @@
   .px-8 {
     padding-inline: calc(var(--spacing) * 8);
   }
+  .py-0\.5 {
+    padding-block: calc(var(--spacing) * 0.5);
+  }
   .py-1 {
     padding-block: var(--spacing);
   }
@@ -771,6 +810,9 @@
   .py-3 {
     padding-block: calc(var(--spacing) * 3);
   }
+  .py-4 {
+    padding-block: calc(var(--spacing) * 4);
+  }
   .pt-3 {
     padding-top: calc(var(--spacing) * 3);
   }
@@ -779,6 +821,9 @@
   }
   .pr-2 {
     padding-right: calc(var(--spacing) * 2);
+  }
+  .pr-8 {
+    padding-right: calc(var(--spacing) * 8);
   }
   .pb-2 {
     padding-bottom: calc(var(--spacing) * 2);
@@ -1262,6 +1307,9 @@
     }
     .hover\:bg-red-600:hover {
       background-color: var(--color-red-600);
+    }
+    .hover\:text-destructive:hover {
+      color: var(--destructive);
     }
     .hover\:text-foreground:hover {
       color: var(--foreground);
