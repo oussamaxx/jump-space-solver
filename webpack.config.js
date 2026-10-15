@@ -1,6 +1,7 @@
 const path = require('path');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = (env, argv) => {
   const isProd = argv.mode === 'production';
@@ -11,8 +12,10 @@ module.exports = (env, argv) => {
   },
   devtool: isProd ? false : 'source-map',
   output: {
-    filename: '[name].bundle.js',
-    path: path.resolve(__dirname, './dist')
+    // Content hashes in production so each deploy busts the browser cache
+    filename: isProd ? '[name].[contenthash:8].bundle.js' : '[name].bundle.js',
+    path: path.resolve(__dirname, './dist'),
+    clean: true,
   },
   resolve: {
     conditionNames: ['svelte', 'browser', 'import'],
@@ -55,12 +58,12 @@ module.exports = (env, argv) => {
     ]
   },
   plugins: [
-    new MiniCssExtractPlugin({ filename: 'styles.css' }),
+    new MiniCssExtractPlugin({ filename: isProd ? 'styles.[contenthash:8].css' : 'styles.css' }),
+    new HtmlWebpackPlugin({ template: './index.html', inject: 'body', scriptLoading: 'blocking' }),
     new CopyWebpackPlugin({
       patterns: [
         { from: './wasm/z3w.wasm', to: './z3w.wasm' },
         { from: './wasm/z3w.js', to: './z3w.js' },
-        { from: './index.html', to: './index.html' },
         { from: './assets/favicon.webp', to: './favicon.webp' },
       ],
     }),
